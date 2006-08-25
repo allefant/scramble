@@ -275,7 +275,10 @@ def handle_line(self, l):
     elif l.startswith("global "):
         l = l[len("global "):]
         to.write(l + ";\n")
-        hot.write("extern " + l + ";\n")
+        assign = outside_string_find(l, "=")
+        if assign >= 0: l2 = l[:assign].rstrip()
+        else: l2 = l
+        hot.write("extern " + l2 + ";\n")
     elif l.startswith("label "):
         l = l[len("label "):]
         to.write("%s:;\n" % l)
