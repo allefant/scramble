@@ -3,7 +3,8 @@ import sys, re, os, StringIO
 
 guard_prefix = ""
 if len(sys.argv) > 4:
-    fin = file(sys.argv[1])
+    egg = sys.argv[1]
+    fin = file(egg)
     fot = file(sys.argv[2], "w")
     real_hot = file(sys.argv[3], "w")
     hot = StringIO.StringIO()
@@ -23,8 +24,13 @@ to = fot
 
 to.write("""
 %s
+#line 1 "%s"
 #include "%s.h"
-""".lstrip() % (blah, name))
+#ifdef None
+#undef None
+#endif
+#define None NULL
+""".lstrip() % (blah, egg, name))
 
 class Level:
     def __init__(self, depth = 0, is_class = False):
@@ -202,6 +208,7 @@ def handle_line(self, l):
     while l[d] == " ": d += 1
     if d > self.depths[-1].depth:
         to.write(" " * self.depths[-1].depth + "{\n")
+        to.write("#line %d\n" % self.num)
         self.depths.append(Level(d))
         self.depths[-1].is_enum = self.depths[-2].is_enum
     elif d < self.depths[-1].depth:
@@ -217,6 +224,7 @@ def handle_line(self, l):
                 self.depths[-1].is_enum = False
             else:
                 to.write(" " * self.depths[-1].depth + "}\n")
+        to.write("#line %d\n" % self.num)
 
     l = l.strip()
 
@@ -333,7 +341,9 @@ def translate():
             self.linecont = l
             continue
 
-        if not l.strip(): continue
+        if not l.strip():
+            to.write("\n") # so line numbers will match
+            continue
 
         if l.rstrip()[-1] == "\\":
             self.linecont = l.rstrip()[:-1]
@@ -357,9 +367,10 @@ hot.write(blah + "\n")
 
 real_hot.write("""
 %s
+#line 1 "%s"
 #ifndef %s
 #define %s
-""".lstrip() % (blah, guard, guard))
+""".lstrip() % (blah, egg, guard, guard))
 
 real_hot.write(typedefs.getvalue())
 real_hot.write(hot.getvalue())
