@@ -188,6 +188,7 @@ def translate_def(self, l):
                 last_type = x[0]
         params = ", ".join(params2)
         if not static:
+            hot.write("#line %d\n" % self.num)
             hot.write("%s %s(%s);\n" % (retval, name, params))
         to.write("%s %s(%s)\n" % (retval, name, params))
 
