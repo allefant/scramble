@@ -147,6 +147,7 @@ def outside_string_replace(l, repl, with):
 
 def outside_string_find(l, what):
     def cb(is_string, pos, sub):
+        if is_string: return
         pos2 = sub.find(what)
         if pos2 >= 0: return pos + pos2
     ret = string_cb(l, cb)
