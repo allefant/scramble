@@ -240,6 +240,11 @@ def handle_line(self, l):
             hot.write("struct %s\n" % params)
             to = hot
             self.depths[-1].is_class = True
+        elif re.compile(r"static class\b").match(l):
+            params = l[len("static class"):-1].strip()
+            to.write("typedef struct %s %s;\n" % (params, params))
+            to.write("struct %s\n" % params)
+            self.depths[-1].is_class = True
         elif re.compile(r"enum\b").match(l):
             params = l[4:-1].strip()
             typedefs.write("typedef enum %s %s;\n" % (params, params))
