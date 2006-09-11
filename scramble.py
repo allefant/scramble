@@ -7,6 +7,7 @@ class Level:
         self.is_class = is_class
         self.is_enum = False
         self.is_function = False
+        self.is_static = False
         self.name = ""
 
 class Translator:
@@ -30,6 +31,7 @@ class Translator:
         self.name = name
 
         self.docstring = None
+        self.function_doc = ""
 
     def header(self):
         self.to.write("""
@@ -80,12 +82,7 @@ class Translator:
                     doc = lines[0]
                     if len(lines) > 1:
                         doc += "\n" + textwrap.dedent("\n".join(lines[1:]))
-                    doc = doc.strip()
-
-                    if self.depths[-1].is_function:
-                        if self.dot:
-                            self.dot.write('"""%s\n' % self.depths[-1].name)
-                            self.dot.write("%s\n" % doc)
+                    self.function_doc = doc.strip()
 
                     self.docstring = None
                 continue
@@ -151,6 +148,12 @@ class Translator:
                     self.to.write(" " * self.depths[-1].depth + "};\n")
                     self.to = self.fot
                     self.depths[-1].is_enum = False
+                elif self.depths[-1].is_function:
+                    self.to.write(" " * self.depths[-1].depth + "}\n")
+                    if self.dot and not self.depths[-1].is_static:
+                        self.dot.write('"""%s\n' % self.depths[-1].name)
+                        self.dot.write("%s\n" % self.function_doc)
+                    self.function_doc = ""
                 else:
                     self.to.write(" " * self.depths[-1].depth + "}\n")
             self.to.write("#line %d\n" % self.num)
@@ -210,10 +213,10 @@ class Translator:
             self.hot.write("#define %s\n" % define)
         elif l.startswith("import "):
             names = l[len("import "):].split(",")
-            translate_import(self, self.hot, names)
+            self.translate_import(self.hot, names)
         elif l.startswith("static import "):
             names = l[len("static import "):].split(",")
-            translate_import(self, self.to, names)
+            self.translate_import(self.to, names)
         elif l.startswith("global "):
             l = l[len("global "):]
             self.to.write(l + ";\n")
@@ -275,6 +278,7 @@ class Translator:
                 self.hot.write("%s %s(%s);\n" % (retval, name, params))
             self.to.write("%s %s(%s)\n" % (retval, name, params))
             self.depths[-1].is_function = True
+            self.depths[-1].is_static = static
             self.depths[-1].name = name
 
     def translate_import(self, t, names):
