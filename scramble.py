@@ -32,7 +32,7 @@ class Translator:
         self.name = name
 
         self.docstring = None
-        self.function_doc = ""
+        self.the_doc = ""
 
     def header(self):
         self.to.write("""
@@ -83,7 +83,7 @@ class Translator:
                     doc = lines[0]
                     if len(lines) > 1:
                         doc += "\n" + textwrap.dedent("\n".join(lines[1:]))
-                    self.function_doc = doc.strip()
+                    self.the_doc = doc.strip()
 
                     self.docstring = None
                 continue
@@ -145,17 +145,25 @@ class Translator:
                     self.to.write(" " * self.depths[-1].depth + "};\n")
                     self.to = self.fot
                     self.depths[-1].is_class = False
+
+                    if self.dot and not self.depths[-1].is_static:
+                        self.dot.write('"""class %s\n' % self.depths[-1].name)
+                        self.dot.write('%s\n' % self.depths[-1].definition)
+                        self.dot.write("%s\n" % self.the_doc)
+                    self.the_doc = ""
                 elif self.depths[-1].is_enum:
                     self.to.write(" " * self.depths[-1].depth + "};\n")
                     self.to = self.fot
                     self.depths[-1].is_enum = False
                 elif self.depths[-1].is_function:
                     self.to.write(" " * self.depths[-1].depth + "}\n")
+                    self.depths[-1].is_function = False
+
                     if self.dot and not self.depths[-1].is_static:
-                        self.dot.write('"""%s\n' % self.depths[-1].name)
+                        self.dot.write('"""def %s\n' % self.depths[-1].name)
                         self.dot.write('%s\n' % self.depths[-1].definition)
-                        self.dot.write("%s\n" % self.function_doc)
-                    self.function_doc = ""
+                        self.dot.write("%s\n" % self.the_doc)
+                    self.the_doc = ""
                 else:
                     self.to.write(" " * self.depths[-1].depth + "}\n")
             self.to.write("#line %d\n" % self.num)
@@ -167,16 +175,9 @@ class Translator:
             if l == "end:":
                 pass
             elif re.compile(r"class\b").match(l):
-                params = l[5:-1].strip()
-                self.typedefs.write("typedef struct %s %s;\n" % (params, params))
-                self.hot.write("struct %s\n" % params)
-                self.to = self.hot
-                self.depths[-1].is_class = True
+                self.translate_class(l)
             elif re.compile(r"static class\b").match(l):
-                params = l[len("static class"):-1].strip()
-                self.to.write("typedef struct %s %s;\n" % (params, params))
-                self.to.write("struct %s\n" % params)
-                self.depths[-1].is_class = True
+                self.translate_class(l)
             elif re.compile(r"enum\b").match(l):
                 params = l[4:-1].strip()
                 self.typedefs.write("typedef enum %s %s;\n" % (params, params))
@@ -283,6 +284,28 @@ class Translator:
             self.depths[-1].is_static = static
             self.depths[-1].name = name
             self.depths[-1].definition = "%s %s(%s)" % (retval, name, params)
+
+    def translate_class(self, l):
+        mob = re.compile(r"\s*(.*?)\s*class\s*(\w+).*").match(l)
+        if not mob:
+            sys.stderr.write("%d: Error, no function!\n" % self.num)
+            return
+        retval = mob.group(1)
+        name = mob.group(2)
+
+        static = "static" in retval.split()
+        if static:
+            self.to.write("typedef struct %s %s;\n" % (name, name))
+            self.to.write("struct %s\n" % name)
+        else:
+            self.typedefs.write("typedef struct %s %s;\n" % (name, name))
+            self.hot.write("struct %s\n" % name)
+            self.to = self.hot
+
+        self.depths[-1].is_class = True
+        self.depths[-1].is_static = static
+        self.depths[-1].name = name
+        self.depths[-1].definition = name
 
     def translate_import(self, t, names):
         q = ('"', '"')
