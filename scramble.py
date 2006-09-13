@@ -9,6 +9,7 @@ class Level:
         self.is_function = False
         self.is_static = False
         self.name = ""
+        self.definition = ""
 
 class Translator:
     def __init__(self, fin, fot, hot, name, egg, guard_prefix = "", dot = None):
@@ -152,6 +153,7 @@ class Translator:
                     self.to.write(" " * self.depths[-1].depth + "}\n")
                     if self.dot and not self.depths[-1].is_static:
                         self.dot.write('"""%s\n' % self.depths[-1].name)
+                        self.dot.write('%s\n' % self.depths[-1].definition)
                         self.dot.write("%s\n" % self.function_doc)
                     self.function_doc = ""
                 else:
@@ -280,6 +282,7 @@ class Translator:
             self.depths[-1].is_function = True
             self.depths[-1].is_static = static
             self.depths[-1].name = name
+            self.depths[-1].definition = "%s %s(%s)" % (retval, name, params)
 
     def translate_import(self, t, names):
         q = ('"', '"')
@@ -417,9 +420,6 @@ def main():
     parser.add_option("-h", "--h", help="The .h file to generate.")
     parser.add_option("-p", "--prefix", help="An optional extra prefix for include guards.")
     parser.add_option("-d", "--docstrings", help="A text file to which to output all docstrings.")
-
-    #parser.set_defaults(prefix = "")
-    #parser.set_defaults(docstrings = "")
 
     options, args = parser.parse_args()
 
