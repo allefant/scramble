@@ -8,8 +8,10 @@ class Level:
         self.is_enum = False
         self.is_function = False
         self.is_static = False
+        self.is_union = False
         self.name = ""
         self.definition = ""
+        self.the_doc = ""
 
 class Translator:
     def __init__(self, fin, fot, hot, name, egg, guard_prefix = "", dot = None):
@@ -24,6 +26,7 @@ class Translator:
         self.typedefs = StringIO.StringIO()
         self.to = fot
         self.dot = dot
+        self.numbering = True
 
         self.guard = guard_prefix + "_" + name.upper().replace("/", "_") + "_"
 
@@ -32,12 +35,10 @@ class Translator:
         self.name = name
 
         self.docstring = None
-        self.the_doc = ""
 
     def header(self):
         self.to.write("""
-%s
-#line 1 "%s"
+%s%s
 #include "%s.h"
 #undef None
 #undef min
@@ -45,7 +46,9 @@ class Translator:
 #define None NULL
 #define min(x, y) ((y) < (x) ? (y) : (x))
 #define max(x, y) ((y) > (x) ? (y) : (x))
-""".lstrip() % (self.blah, self.egg, self.name))
+""".lstrip() % (self.blah,
+        self.numbering and '\n#line 1 "%s"' % self.egg or "",
+        self.name))
 
     def footer(self):
         self.to.write(self.blah + "\n")
@@ -53,16 +56,32 @@ class Translator:
         self.hot.write(self.blah + "\n")
 
         self.real_hot.write("""
-%s
-#line 1 "%s"
+%s%s
 #ifndef %s
 #define %s
-""".lstrip() % (self.blah, self.egg, self.guard, self.guard))
+""".lstrip() % (self.blah,
+        self.numbering and '\n#line 1 "%s"' % self.egg or "",
+        self.guard, self.guard))
 
         self.real_hot.write(self.typedefs.getvalue())
         self.real_hot.write(self.hot.getvalue())
 
+    def add_to_docstring(self, l):
+        self.docstring += l
+        if self.docstring.rstrip().endswith('"""'):
+            self.docstring = self.docstring.rstrip()[:-3]
+            lines = self.docstring.splitlines()
+            doc = lines[0]
+            if len(lines) > 1:
+                doc += "\n" + textwrap.dedent("\n".join(lines[1:]))
+            self.depths[-1].the_doc = doc.strip()
+
+            self.docstring = None
+
+            if self.numbering: self.to.write("#line %d\n" % self.num)
+
     def translate(self):
+
         for l in self.fin.readlines() + ["end:"]:
             self.num += 1
 
@@ -70,22 +89,9 @@ class Translator:
                 l = self.linecont.rstrip() + " " + l.lstrip()
                 self.linecont = ""
 
-            # Docstrings.
-            if self.docstring == None and l.lstrip().startswith('"""'):
-                self.docstring = ""
-                l = l.lstrip()[3:]
-
+            # Docstring continuation.
             if self.docstring != None:
-                self.docstring += l
-                if self.docstring.rstrip().endswith('"""'):
-                    self.docstring = self.docstring.rstrip()[:-3]
-                    lines = self.docstring.splitlines()
-                    doc = lines[0]
-                    if len(lines) > 1:
-                        doc += "\n" + textwrap.dedent("\n".join(lines[1:]))
-                    self.the_doc = doc.strip()
-
-                    self.docstring = None
+                self.add_to_docstring(l)
                 continue
 
             # Remove comments.
@@ -112,7 +118,7 @@ class Translator:
                 continue
 
             if not l.strip():
-                self.to.write("\n") # so line numbers will match
+                if self.numbering: self.to.write("\n") # so line numbers will match
                 continue
 
             if l.rstrip()[-1] == "\\":
@@ -135,11 +141,15 @@ class Translator:
         while l[d] == " ": d += 1
         if d > self.depths[-1].depth:
             self.to.write(" " * self.depths[-1].depth + "{\n")
-            self.to.write("#line %d\n" % self.num)
+            if self.numbering: self.to.write("#line %d\n" % self.num)
             self.depths.append(Level(d))
+
+            #FIXME: what is this for?
             self.depths[-1].is_enum = self.depths[-2].is_enum
+
         elif d < self.depths[-1].depth:
             while d < self.depths[-1].depth:
+                the_doc = self.depths[-1].the_doc
                 self.depths.pop()
                 if self.depths[-1].is_class:
                     self.to.write(" " * self.depths[-1].depth + "};\n")
@@ -149,12 +159,15 @@ class Translator:
                     if self.dot and not self.depths[-1].is_static:
                         self.dot.write('"""class %s\n' % self.depths[-1].name)
                         self.dot.write('%s\n' % self.depths[-1].definition)
-                        self.dot.write("%s\n" % self.the_doc)
-                    self.the_doc = ""
+                        self.dot.write("%s\n" % the_doc)
                 elif self.depths[-1].is_enum:
                     self.to.write(" " * self.depths[-1].depth + "};\n")
                     self.to = self.fot
                     self.depths[-1].is_enum = False
+                elif self.depths[-1].is_union:
+                    self.to.write(" " * self.depths[-1].depth + "} %s;\n" %
+                        self.depths[-1].name)
+                    self.depths[-1].is_union = False
                 elif self.depths[-1].is_function:
                     self.to.write(" " * self.depths[-1].depth + "}\n")
                     self.depths[-1].is_function = False
@@ -162,13 +175,18 @@ class Translator:
                     if self.dot and not self.depths[-1].is_static:
                         self.dot.write('"""def %s\n' % self.depths[-1].name)
                         self.dot.write('%s\n' % self.depths[-1].definition)
-                        self.dot.write("%s\n" % self.the_doc)
-                    self.the_doc = ""
+                        self.dot.write("%s\n" % the_doc)
                 else:
                     self.to.write(" " * self.depths[-1].depth + "}\n")
-            self.to.write("#line %d\n" % self.num)
+            if self.numbering: self.to.write("#line %d\n" % self.num)
 
         l = l.strip()
+
+        # Docstring?
+        if l.startswith('"""'):
+            self.docstring = ""
+            self.add_to_docstring(l.lstrip()[3:])
+            return
 
         self.to.write(" " * self.depths[-1].depth)
         if l[-1] == ":":
@@ -184,6 +202,12 @@ class Translator:
                 self.hot.write("enum %s\n" % params)
                 self.to = self.hot
                 self.depths[-1].is_enum = True
+            elif re.compile(r"union\b").match(l):
+                params = l[5:-1].strip()
+                self.hot.write("union\n")
+                self.to = self.hot
+                self.depths[-1].name = params
+                self.depths[-1].is_union = True
             elif re.compile(r"do\b").match(l):
                 params = l[2:-1].strip()
                 self.to.write("do %s\n" % params)
@@ -277,7 +301,7 @@ class Translator:
                     last_type = x[0]
             params = ", ".join(params2)
             if not static:
-                self.hot.write("#line %d\n" % self.num)
+                if self.numbering: self.hot.write("#line %d\n" % self.num)
                 self.hot.write("%s %s(%s);\n" % (retval, name, params))
             self.to.write("%s %s(%s)\n" % (retval, name, params))
             self.depths[-1].is_function = True
@@ -315,7 +339,7 @@ class Translator:
                 q = ("<", ">")
                 name = name[7:].strip()
             if name:
-                t.write("#line %d\n" % self.num)
+                if self.numbering: t.write("#line %d\n" % self.num)
                 t.write("#include %s%s.h%s\n" % (q[0], name, q[1]))
 
 
@@ -439,6 +463,7 @@ def main():
     parser.add_option("-?", "--help", action = "help"),
     parser.add_option("-i", "--input", help="The input file to parse.")
     parser.add_option("-n", "--name", help="The base name (used for guard and #include).")
+    parser.add_option("-N", "--no-line-numbers", help="Do not keep line number information.", action = "store_true")
     parser.add_option("-c", "--c", help="The .c file to generate.")
     parser.add_option("-h", "--h", help="The .h file to generate.")
     parser.add_option("-p", "--prefix", help="An optional extra prefix for include guards.")
@@ -474,9 +499,17 @@ def main():
 
     translator = Translator(fin, fot, real_hot, name, egg, guard_prefix, docstrings)
 
+    if options.no_line_numbers:
+	translator.numbering = False
+
     translator.header()
     translator.translate()
     translator.footer()
+
+    if translator.dot:
+        translator.dot.write('"""module %s\n' % name)
+        translator.dot.write('%s\n' % egg)
+        translator.dot.write("%s\n" % translator.depths[-1].the_doc)
 
 if __name__ == "__main__":
     main()
