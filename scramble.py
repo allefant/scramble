@@ -86,6 +86,7 @@ class Translator:
             self.num += 1
 
             if self.linecont:
+                if self.numbering: self.to.write("\n") # so line numbers will match
                 l = self.linecont.rstrip() + " " + l.lstrip()
                 self.linecont = ""
 
