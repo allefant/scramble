@@ -239,6 +239,10 @@ class Translator:
         elif l.startswith("macro "):
             define = l[len("macro "):]
             self.hot.write("#define %s\n" % define)
+        elif re.compile(r"typedef\b").match(l):
+            self.hot.write("%s;\n" % l)
+        elif re.compile(r"static typedef\b").match(l):
+            self.to.write("%s;\n" % l) 
         elif l.startswith("import "):
             names = l[len("import "):].split(",")
             self.translate_import(self.hot, names)
@@ -313,7 +317,7 @@ class Translator:
     def translate_class(self, l):
         mob = re.compile(r"\s*(.*?)\s*class\s*(\w+).*").match(l)
         if not mob:
-            sys.stderr.write("%d: Error, no function!\n" % self.num)
+            sys.stderr.write("%d: Error, no class!\n" % self.num)
             return
         retval = mob.group(1)
         name = mob.group(2)
