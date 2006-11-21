@@ -1,0 +1,20 @@
+asdfadsf
+{
+asdf
+}
+x
+y
+if((x < 3))
+{
+    printf("nay\n");
+}
+if(x >= 3)  printf("aye\n");
+z
+/* dsaf
+ * asdf
+ */
+
+void blah(void)
+{
+    vlehz;
+}
