@@ -221,6 +221,12 @@ class Translator:
             elif re.compile(r"switch\b").match(l):
                 params = l[6:-1].strip()
                 self.to.write("switch (%s)\n" % params)
+            elif re.compile(r"case\b").match(l):
+                l2 = l[4:].strip(":")
+                params = l2.split(",")
+                for p in params:
+                    self.to.write("case %s: " % p)
+                self.to.write("\n")
             elif re.compile(r"\bif\b").match(l):
                 params = l[2:-1].strip()
                 self.to.write("if (%s)\n" % translate_conditional_params(params))
@@ -436,13 +442,13 @@ def colon_find(l):
             colon = i
     return colon
 
-def outside_string_replace(l, repl, with):
+def outside_string_replace(l, repl, withwhat):
     out = [""]
     def cb(is_string, pos, sub):
         if is_string:
             out[0] += sub
         else:
-            out[0] += re.compile(repl).sub(with, sub)
+            out[0] += re.compile(repl).sub(withwhat, sub)
 
     string_cb(l, cb)
 
