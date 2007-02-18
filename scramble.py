@@ -308,8 +308,15 @@ class Translator:
                 elif len(x) == 1 and p != "void":
                     params2.append(last_type + " " + p)
                 else:
-                    params2.append(p)
-                    last_type = x[0]
+                    if len(x) == 2:
+                        y = x[1].split(" ", 1)
+                        if y[0] == "const":
+                            x[0] += " const"
+                            x[1] = y[1]
+                        params2.append(p)
+                        last_type = x[0]
+                    else:
+                        params2.append(p)
             params = ", ".join(params2)
             if not static:
                 if self.numbering: self.hot.write("#line %d\n" % self.num)
