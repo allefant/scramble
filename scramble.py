@@ -43,9 +43,13 @@ class Translator:
 #undef None
 #undef min
 #undef max
+#undef True
+#undef False
 #define None NULL
 #define min(x, y) ((y) < (x) ? (y) : (x))
 #define max(x, y) ((y) > (x) ? (y) : (x))
+#define True 1
+#define False 0
 """.lstrip() % (self.blah,
         self.numbering and '\n#line 1 "%s"' % self.egg or "",
         self.name))
@@ -96,7 +100,17 @@ class Translator:
                 continue
 
             # Remove comments.
-            c = outside_string_find(l, "#")
+            c = -1
+            while 1:
+                c2 = outside_string_find(l[c + 1:], "#")
+                print c, c2, l[c + 1 + c2:]
+                if c2 < 0:
+                    c = -1
+                    break
+                if l[c + 1 + c2 + 1] != '#':
+                    c += 1 + c2
+                    break
+                c += 1 + c2 + 1
             if c >= 0:
                 if not l.strip().split()[0] in ["#if", "#ifdef", "#ifndef", "#endif", "#else",
                     "#undef", "#define", "#include", "#header", "#implementation",
