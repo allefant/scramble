@@ -100,22 +100,13 @@ class Translator:
                 continue
 
             # Remove comments.
-            c = -1
-            while 1:
-                c2 = outside_string_find(l[c + 1:], "#")
-                print c, c2, l[c + 1 + c2:]
-                if c2 < 0:
-                    c = -1
-                    break
-                if l[c + 1 + c2 + 1] != '#':
-                    c += 1 + c2
-                    break
-                c += 1 + c2 + 1
+            c = outside_string_find(l, "#")
             if c >= 0:
                 if not l.strip().split()[0] in ["#if", "#ifdef", "#ifndef", "#endif", "#else",
                     "#undef", "#define", "#include", "#header", "#implementation",
-                    "#both"]:
-                    l = l[:c]
+                    "#both", "macro"]:
+                    if not l.strip().split()[1] in ["macro"]:
+                        l = l[:c]
 
             b = parenthesis_balance(l, "{", "}")
             if b > 0:
