@@ -102,10 +102,11 @@ class Translator:
             # Remove comments.
             c = outside_string_find(l, "#")
             if c >= 0:
-                if not l.strip().split()[0] in ["#if", "#ifdef", "#ifndef", "#endif", "#else",
+                tokens = l.strip().split()
+                if not tokens[0] in ["#if", "#ifdef", "#ifndef", "#endif", "#else",
                     "#undef", "#define", "#include", "#header", "#implementation",
                     "#both", "macro"]:
-                    if not l.strip().split()[1] in ["macro"]:
+                    if len(tokens) > 1 and tokens[1] in ["macro"]:
                         l = l[:c]
 
             b = parenthesis_balance(l, "{", "}")
