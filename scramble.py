@@ -106,7 +106,8 @@ class Translator:
                 if not tokens[0] in ["#if", "#ifdef", "#ifndef", "#endif", "#else",
                     "#undef", "#define", "#include", "#header", "#implementation",
                     "#both", "macro"]:
-                    if not tokens[1] in ["macro"]:
+                    if len(tokens) <= 1 or not (tokens[0] in ["static",
+                        "global"] and tokens[1] in ["macro"]):
                         l = l[:c]
 
             b = parenthesis_balance(l, "{", "}")
