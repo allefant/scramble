@@ -13,6 +13,7 @@ class Node:
     """
     def __init__(self, kind, value):
         self.kind, self.value = kind, value
+        self.comments = []
     def __repr__(self):
         return "Node(%d, %s)" % (self.kind, repr(self.value))
 
@@ -32,12 +33,14 @@ class Parser:
     SYMBOL = 2
     LINE = 3
     BLOCK = 4
+    COMMENT = 5
 
     # Combined symbols of length 2 and 3.
-    operators2 = ["==", "++", "--", "->", "<<", ">>", "+=", "-=", "*=", "/="]
-    operators3 = ["***"]
+    operators2 = ["==", "++", "--", "->", "<<", ">>", "+=", "-=", "*=", "/=",
+        "|=", "&=", "^=", "~=", ">=", "<=", "!=", "&&", "||", "%="]
+    operators3 = ["***", ">>=", "<<="]
 
-    def __init__(self, filename, text):
+    def __init__(self, filename, text, comments = False):
         self.text = text.replace("\r", "")
         if text[-1] != "\n": text += "\n"
         self.pos = 0
@@ -45,6 +48,7 @@ class Parser:
         self.row = 1
         self.rowpos = 0
         self.c_tertiary_hack = 0
+        self.retain_comments = comments
 
     def error_pos(self, message, l, o):
         message = "%s: %d/%d: %s" % (self.filename, l, o, message)
@@ -82,7 +86,6 @@ class Parser:
             if (quote_pos - esc) % 2 == 1:
                 return quote_pos
             pos = quote_pos + 1
-        
 
     def find_single_quote_end(self, quote):
         l = self.row
@@ -123,10 +126,15 @@ class Parser:
         elif c == '\\':
             if self.text[self.pos + 1] == '\n':
                 self.pos += 2
-                self.row += 1
-                self.rowpos = self.pos
             else:
-                self.error("Newline must follow line continuation(\\).")
+                epos = self.text.find("#", self.pos)
+                if epos == -1:
+                    self.error("Newline must follow line continuation(\\).")
+                else:
+                    epos = self.text.find("\n", self.pos)
+                    self.pos = epos + 1
+            self.row += 1
+            self.rowpos = self.pos
 
         elif c in "([{":
             self.balance += 1
@@ -153,8 +161,13 @@ class Parser:
                 self.lines.append([])
             self.pos += 1
         elif c == '#':
+            l = self.row
+            o = self.pos - self.rowpos
+            self.pos += 1
             epos = self.text.find("\n", self.pos)
             if epos == -1: epos = len(self.text)
+            if self.retain_comments:
+                self.add_token(self.COMMENT, self.text[self.pos:epos], l, o)
             self.pos = epos
         elif c.isalnum() or c == "_":
             l = self.row
@@ -168,12 +181,12 @@ class Parser:
         else:
             c2 = self.text[self.pos:self.pos + 2]
             c3 = self.text[self.pos:self.pos + 3]
-            if c2 in self.operators2:
-                self.add_token(self.SYMBOL, c2, self.row, self.pos - self.rowpos)
-                self.pos += 2
-            elif c3 in self.operators3:
+            if c3 in self.operators3:
                 self.add_token(self.SYMBOL, c3, self.row, self.pos - self.rowpos)
                 self.pos += 3
+            elif c2 in self.operators2:
+                self.add_token(self.SYMBOL, c2, self.row, self.pos - self.rowpos)
+                self.pos += 2
             else:
                 self.add_token(self.SYMBOL, c, self.row, self.pos - self.rowpos)
                 self.pos += 1
@@ -202,11 +215,17 @@ class Parser:
         nes.row = 0
         nes.node = self.root
         nested = [nes]
+        comments = []
         for line in self.lines:
             if not line: continue
+            if line[0].kind == self.COMMENT:
+                comments.extend(line)
+                continue
             row = line[0].row
             col = line[0].col
             n2 = Node(self.LINE, line)
+            n2.comments.extend(comments)
+            comments = []
             if col == nested[-1].col:
                 nested[-1].node.value.append(n2)
             elif col > nested[-1].col:
