@@ -12,11 +12,16 @@ class CWriter:
 
     # Tokens which when preceding an open parenthesis are not hugged by it.
     no_hug_tokens = ["if", "elif", "else", "for", "while", "switch"]
+    # Symbols which hug the following token.
+    hug_following_symbols = ["(", ".", "->", "--", "++", "[", "{", "***"]
+    # Symbols which hug the preceding token.
+    hug_preceding_symbols = [")", ",", ";", "++", "--", ".", "->", "[", "]", "}", "***"]
 
     def add_header_line(self, code):
         if not self.no_lines and not self.in_macro:
             if self.out_hrow == 0:
-                self.header += "#line %d \"%s.py\"\n" % (self.in_row, self.name)
+                self.header += "#line %d \"%s\"\n" % (self.in_row,
+                    self.p.filename)
                 self.out_hrow = self.in_row
             if self.out_hrow != self.in_row and not code.strip() in ("}", "};"):
                 self.header += "#line %d\n" % self.in_row
@@ -29,11 +34,14 @@ class CWriter:
     def add_code_line(self, code):
         if not self.no_lines and not self.in_macro:
             if self.out_crow == 0:
-                self.code += "#line %d \"%s.py\"\n" % (self.in_row, self.name)
+                self.code += "#line %d \"%s\"\n" % (self.in_row,
+                    self.p.filename)
                 self.out_crow = self.in_row
-            if self.out_crow != self.in_row and code.strip() != "}":
+            if self.out_crow != self.in_row and (
+                code == None or code.strip() != "}"):
                 self.code += "#line %d\n" % self.in_row
                 self.out_crow = self.in_row
+        if code == None: return
         self.code += code
         if self.in_macro: self.code += " \\"
         self.code += "\n"
@@ -64,30 +72,38 @@ class CWriter:
                 if word == "min": self.need_min = True
                 if word == "max": self.need_max = True
                 if word == "with": word = ":" # for bit fields
+            if tok.kind == p.SYMBOL:
+                if word == "***": word = "#" # macro string concatenation
             if prev:
                 if prev.kind == p.SYMBOL:
                     if tok.kind == p.SYMBOL:
-                        if tok.value == "(" and prev.value != "(":
-                            line += " "
+                        if tok.value in "{[()]}" and prev.value in "{[()]}":
+                            if tok.value == "(" and prev.value == ")":
+                                line += " "
+                        elif prev.value in self.hug_following_symbols:
+                            if tok.value in self.hug_preceding_symbols:
+                                pass
+                            else:
+                                line += " "
                         else:
-                            pass
+                            line += " "
                     else:
-                        # symbols which hug the following token
-                        if prev.value in ["(", ".", "->", "--", "++"]:
+                        if prev.value in self.hug_following_symbols:
                             pass
                         else:
                             line += " "
                 else:
                     if tok.kind == p.SYMBOL:
-                        # symbols which hug the preceding token
-                        if tok.value in ["(", ")", ",", ";", "++", "--", ".",
-                            "->"]:
+                        if tok.value == "(":
                             if prev.value in self.no_hug_tokens:
                                 line += " "
                             else:
                                 pass
+                        elif tok.value in self.hug_preceding_symbols:
+                            pass
                         else:
                             line += " "
+                        
                     else:
                         line += " "
             line += word
@@ -210,16 +226,41 @@ class CWriter:
         if self.indent == 0 and not is_static:
             self.in_header = True
         if block:
-            decl = "typedef struct " + name + " " + name + ";\n"
+            decl = "typedef " + "struct" + " " + name + " " + name + ";\n"
             if self.in_header:
                 self.type_hdecl += decl
             else:
                 self.type_cdecl += decl
-            self.add_line(self.indent * "    " + "struct " + name + " {")
+            self.add_line(self.indent * "    " + "struct" + " " + name + " {")
             self.indent += 1
             self.write_block(block)
             self.indent -= 1
             self.add_line(self.indent * "    " + "};")
+
+        self.in_header = in_header
+
+    def handle_union(self, tokens, is_static, block):
+        name = tokens[0].value
+        in_header = self.in_header
+        if self.indent == 0 and not is_static:
+            self.in_header = True
+        if block:
+            self.add_line(self.indent * "    " + "union" + " {")
+            self.indent += 1
+            self.write_block(block)
+            self.indent -= 1
+            self.add_line(self.indent * "    " + "} " + name + ";")
+
+        self.in_header = in_header
+
+    def handle_typedef(self, tokens, is_static):
+        name = tokens[0].value
+        in_header = self.in_header
+        if self.indent == 0 and not is_static:
+            self.in_header = True
+
+        line = self.format_line(tokens)
+        self.add_line(self.indent * "    " + line + ";")
 
         self.in_header = in_header
 
@@ -269,13 +310,16 @@ class CWriter:
             self.in_macro += 1
             self.add_line("#define " + line)
             self.indent += 1
-            self.write_block(block)
+            self.write_block(block, is_macro = True)
+
+            # Remove the last backslash
+            if self.in_header:
+                self.header = self.header[:-3] + "\n"
+            else:
+                self.code = self.code[:-3] + "\n"
+
             self.indent -= 1
             self.in_macro -= 1
-            no_lines = self.no_lines
-            self.no_lines = True
-            self.add_line("// #define ends")
-            self.no_lines = no_lines
         else:
             # Compare those in C:
             # #define X(x)
@@ -314,8 +358,21 @@ class CWriter:
         tokens = s.value[:]
 
         if tokens:
+            # docstring
             if tokens[0].kind == p.STRING:
-                # Ignore doc-string in C output.
+                if not self.in_header:
+                    self.add_code_line(None)
+                    first = True
+                    for line in tokens[0].value.splitlines():
+                        line = line.strip()
+                        if line in ["", '"""', "'''"]: continue
+                        if first: self.code += "    /* "; first = False
+                        else: self.code += "     * "
+                        self.code += line
+                        self.code += "\n"
+                        self.out_crow += 1
+                    if not first: self.code += "     */\n"
+                    self.out_crow += 1
                 return
 
             self.in_row = tokens[0].row
@@ -323,11 +380,28 @@ class CWriter:
             if tokens[0].kind == p.TOKEN:
                 if tokens[0].value in ["switch", "while", "if"]:
                     tokens = tokens[0:1] + [self.openparenthesis] + tokens[1:] + [self.closeparenthesis]
-                elif tokens[0].value in ["case", "default"]:
+                elif tokens[0].value == "case":
+                    cases = []
+                    for tok in tokens[1:]:
+                        if not cases:
+                            cases.append([])
+
+                        if tok.kind == p.SYMBOL and tok.value == ",":
+                            cases.append([])
+                        else:
+                            cases[-1].append(tok)
+
+                    casetok = tokens[0]
+                    tokens = []
+                    for case in cases:
+                        tokens.append(casetok)
+                        tokens.extend(case)
+                        tokens.append(self.colon)
+                elif tokens[0].value == "default":
                     tokens = tokens + [self.colon]
                 elif tokens[0].value == "for":
                     got_while = False
-                    got_whith = False
+                    got_with = False
                     tokens2 = tokens[0:1] + [self.openparenthesis]
                     for tok in tokens[1:]:
                         if tok.kind == p.TOKEN and tok.value == "while":
@@ -370,6 +444,9 @@ class CWriter:
                     tokens[1].value == "enum":
                     self.handle_enum(tokens[2:], 1, block)
                     return
+                elif tokens[0].value == "union":
+                    self.handle_union(tokens[1:], 0, block)
+                    return
                 elif tokens[0].value == "macro":
                     self.handle_macro(tokens[1:], 0, block)
                     return
@@ -377,13 +454,27 @@ class CWriter:
                     tokens[1].value == "macro":
                     self.handle_macro(tokens[2:], 1, block)
                     return
+                elif tokens[0].value == "typedef":
+                    self.handle_typedef(tokens, 0)
+                    return
+                elif tokens[0].value == "static" and len(tokens) > 1 and\
+                    tokens[1].value == "typedef":
+                    self.handle_typedef(tokens[1:], 1)
+                    return
                 elif tokens[0].value == "global":
                     if tokens[1].value == "***":
                         self.handle_preprocessor(tokens[2:], 0)
                         return
-                    else:
+                    else: # assume variable declaration
                         line = self.format_line(tokens[1:])
-                        self.add_header_line(self.indent * "    " + line + ";")
+                        self.add_line(line + ";")
+                        tokens2 = []
+                        for tok in tokens[1:]:
+                            if tok.kind == p.SYMBOL and tok.value == "=":
+                                break
+                            tokens2.append(tok)
+                        line = self.format_line(tokens2)
+                        self.add_header_line("extern " + line + ";")
                         return
                 else:
                     is_function = False
@@ -412,18 +503,26 @@ class CWriter:
             else:
                 self.add_line(self.indent * "    " + line + ";")
 
-    def write_block(self, b):
+    def write_block(self, b, is_macro = False):
         p = self.p
         i = 0
-        while i < len(b.value):
+        n = len(b.value)
+        while i < n:
             s = b.value[i]
             i += 1
             block = None
-            if i < len(b.value):
+            if i < n:
                 if b.value[i].kind == p.BLOCK:
                     block = b.value[i]
                     i += 1
             if s.kind == p.LINE:
+                if not self.in_header:
+                    for c in s.comments:
+                        self.code += self.indent * "    "
+                        self.code += "//"
+                        self.code += c.value.rstrip()
+                        self.code += "\n"
+                        self.out_crow += 1
                 self.write_line(s, block)
             else:
                 p.error_pos("Unexpected block.", 0, 0)

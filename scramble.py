@@ -11,6 +11,7 @@ def main():
     o("-?", "--help", action = "help"),
     o("-i", "--input", help = "input file")
     o("-c", "--cfile", help = "c output file")
+    o("-C", "--comments", help = "keep comments", action = "store_true")
     o("-h", "--hfile", help = "h output file")
     o("-n", "--name", help = "module name")
     o("-p", "--prefix", help = "header guard prefix", default = "")
@@ -22,7 +23,7 @@ def main():
     p = None
     if options.input:
         text = open(options.input, "r").read()
-        p = Parser(options.input, text)
+        p = Parser(options.input, text, comments = options.comments)
         try:
             p.parse()
         except MyError as e:
@@ -33,6 +34,7 @@ def main():
             options.name = os.path.splitext(options.input)[0]
     else:
         print("No input file given with -i.")
+        op.print_help()
         exit(1)
 
     if p and options.sfile:

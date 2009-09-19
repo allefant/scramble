@@ -52,7 +52,7 @@ def cb(mob):
     text = re.compile(r"\n ?(\s*)\*?").sub(r"\n\1#", text)
     return "#" + text
 text = re.compile(r"/\*.*?\*/", re.S).sub(cb, text)
-# remove ;
+# remove ; at end of line
 text = re.compile(r";$", re.M).sub("", text)
 text = re.compile(r";(\s*#)", re.M).sub(r"\1", text)
 # convert else if
