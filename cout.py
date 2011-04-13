@@ -69,8 +69,8 @@ class CWriter:
                 if word == "None": word = "NULL"
                 if word == "True": word = "1"
                 if word == "False": word = "0"
-                if word == "min": self.need_min = True
-                if word == "max": self.need_max = True
+                if word == "min": word = "__min"; self.need_min = True
+                if word == "max": word = "__max"; self.need_max = True
                 if word == "with": word = ":" # for bit fields
             if tok.kind == p.SYMBOL:
                 if word == "***": word = "#" # macro string concatenation
@@ -145,6 +145,7 @@ class CWriter:
         i += 1
         tokens2.append(name)
 
+        op = None
         params = [[0]]
         balance = 0
         while i < len(tokens):
@@ -166,6 +167,10 @@ class CWriter:
             params[-1].append(tok)
             if tok.kind != p.SYMBOL or tok.value != "*":
                 params[-1][0] += 1
+
+        if op is None:
+            p.error_pos("Invalid function definition",
+                tokens[i - 1].row, tokens[i - 1].col)
 
         tokens2.append(op)
 
@@ -553,8 +558,8 @@ class CWriter:
         code = ""
         if not no_lines: code += self.note
         code += "#include \"" + name + ".h\"\n"
-        if self.need_min: code += "#define min(x, y) ((y) < (x) ? (y) : (x))\n"
-        if self.need_max: code += "#define max(x, y) ((y) > (x) ? (y) : (x))\n"
+        if self.need_min: code += "#define __min(x, y) ((y) < (x) ? (y) : (x))\n"
+        if self.need_max: code += "#define __max(x, y) ((y) > (x) ? (y) : (x))\n"
         code += self.type_cdecl
         code += self.code
         if not no_lines: code += self.note
