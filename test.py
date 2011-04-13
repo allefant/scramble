@@ -97,7 +97,7 @@ def test_param2():
     return c_test("""
 void (*)(int x) def x(void (*f)(int x, void *g), void *g): pass
 """, """
-void(*) (int x) x(void(* f) (int x, void * g), void * g) {
+void( * ) (int x) x(void( * f) (int x, void * g) , void * g) {
     ;
 }""")
 
@@ -105,7 +105,7 @@ def test_param3():
     return c_test("""
 def x(int **a, b, *c, **d): pass
 """, """
-void x(int ** a, int b, int * c, int ** d) {
+void x(int * * a, int b, int * c, int * * d) {
     ;
 }""")
 
@@ -161,8 +161,7 @@ macro A:
 #define A \\
     void x(void) { \\
         ; \\
-    } \\
-// #define ends
+    }
 """)
 
 def test_macro3():
