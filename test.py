@@ -219,6 +219,33 @@ def test_label():
 x :;
 goto x;""")
 
+def test_for_range():
+    return c_test("""
+for x in range(10): print(x)
+    """, """
+for (x = 0; x < 10; x += 1) {
+    print(x);
+}
+""")
+
+def test_for_range2():
+    return c_test("""
+for x in range(1, 10): print(x)
+    """, """
+for (x = 1; x < 10; x += 1) {
+    print(x);
+}
+""")
+
+def test_for_range3():
+    return c_test("""
+for x in range(2, 10, 3): print(x)
+    """, """
+for (x = 2; x < 10; x += 3) {
+    print(x);
+}
+""")
+
 G = "\x1b[1;32m"
 R = "\x1b[1;31m"
 O = "\x1b[0m"

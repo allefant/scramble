@@ -37,7 +37,7 @@ def parenthesis_balance(l, x, y):
         elif c == y:
             b -= 1
             if b <= 0: return pos
-    return None
+    return pos
 
 inf = file(input)
 ouf = file(output, "w")

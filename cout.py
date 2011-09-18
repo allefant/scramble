@@ -4,6 +4,9 @@ class CWriter:
     openparenthesis = parser.Token(parser.Parser.SYMBOL, "(", 0, 0)
     closeparenthesis = parser.Token(parser.Parser.SYMBOL, ")", 0, 0)
     colon = parser.Token(parser.Parser.SYMBOL, ":", 0, 0)
+    assignment = parser.Token(parser.Parser.SYMBOL, "=", 0, 0)
+    lowerthan = parser.Token(parser.Parser.SYMBOL, "<", 0, 0)
+    increment = parser.Token(parser.Parser.SYMBOL, "+=", 0, 0)
     semicolon = parser.Token(parser.Parser.SYMBOL, ";", 0, 0)
     comma = parser.Token(parser.Parser.SYMBOL, ",", 0, 0)
     void = parser.Token(parser.Parser.TOKEN, "void", 0, 0)
@@ -354,6 +357,72 @@ class CWriter:
         self.add_line(self.indent * "    " + "#" + line)
 
         self.in_header = in_header
+    
+    def handle_for_while(self, tokens):
+        p = self.p
+        got_while = False
+        got_with = False
+
+        tokens2 = tokens[0:1] + [self.openparenthesis]
+        for tok in tokens[1:]:
+            if tok.kind == p.TOKEN and tok.value == "while":
+                tokens2 += [self.semicolon]
+                got_while = True
+            elif tok.kind == p.TOKEN and tok.value == "with":
+                tokens2 += [self.semicolon]
+                got_with = True
+            else:
+                tokens2 += [tok]
+        tokens2 += [self.closeparenthesis]
+        if not got_while or not got_with:
+            p.error_token("For loop syntax is 'for x while y with z'.",
+                tokens[0])
+        return tokens2
+    
+    def handle_for_range(self, tokens_variable, tokens_range):
+        p = self.p
+        
+        ob = tokens_range[0]
+        cb = tokens_range[-1]
+        if ob.kind != p.SYMBOL or ob.value != "(":
+            p.error_token("Need opening brace after range.", ob)
+        if cb.kind != p.SYMBOL or cb.value != ")":
+            p.error_token("Need closing brace for range.", cb)
+        
+        tokens_range = tokens_range[1:-1]
+
+        range_parts = []
+        toks = []
+        for tok in tokens_range:
+            if tok.kind == p.SYMBOL and tok.value == ",":
+                range_parts.append(toks)
+                toks = []
+            else:
+                toks += [tok]
+        range_parts.append(toks)
+
+        if len(range_parts) == 1:
+            a = [parser.Token(parser.Parser.TOKEN, "0", 0, 0)]
+            b = range_parts[0]
+            c = [parser.Token(parser.Parser.TOKEN, "1", 0, 0)]
+        elif len(range_parts) == 2:
+            a = range_parts[0]
+            b = range_parts[1]
+            c = [parser.Token(parser.Parser.TOKEN, "1", 0, 0)]
+        elif len(range_parts) == 3:
+            a = range_parts[0]
+            b = range_parts[1]
+            c = range_parts[2]
+        else:
+            p.error_token("Need 1, 2 or 3 parameters for range.", tokens_range[0])
+
+        decl = tokens_variable[:1]
+        v = tokens_variable[-1]
+        tokens2 = decl + [self.openparenthesis]
+        tokens2 += [v, self.assignment] + a + [self.semicolon]
+        tokens2 += [v, self.lowerthan] +  b + [self.semicolon]
+        tokens2 += [v, self.increment] + c + [self.closeparenthesis]
+        return tokens2
 
     def write_line(self, s, block):
         """
@@ -405,23 +474,20 @@ class CWriter:
                 elif tokens[0].value == "default":
                     tokens = tokens + [self.colon]
                 elif tokens[0].value == "for":
-                    got_while = False
-                    got_with = False
-                    tokens2 = tokens[0:1] + [self.openparenthesis]
-                    for tok in tokens[1:]:
-                        if tok.kind == p.TOKEN and tok.value == "while":
-                            tokens2 += [self.semicolon]
-                            got_while = True
-                        elif tok.kind == p.TOKEN and tok.value == "with":
-                            tokens2 += [self.semicolon]
-                            got_with = True
-                        else:
-                            tokens2 += [tok]
-                    tokens2 += [self.closeparenthesis]
-                    if not got_while or not got_with:
-                        p.error_pos("For loop syntax is 'for x while y with z'.",
-                            tokens[0].row, tokens[0].col)
-                    tokens = tokens2
+                    in_pos = None
+                    use_range = False
+                    for i, tok in enumerate(tokens):
+                        if tok.kind == p.TOKEN and tok.value == "in":
+                            in_pos = i
+                        elif tok.kind == p.TOKEN and tok.value == "range":
+                            if i == in_pos + 1:
+                                use_range = True
+                                break
+                    if use_range:
+                        tokens = self.handle_for_range(tokens[:in_pos],
+                            tokens[in_pos + 2:])
+                    else:
+                        tokens = self.handle_for_while(tokens)
                 elif tokens[0].value == "pass":
                     tokens = []
                 elif tokens[0].value == "label":

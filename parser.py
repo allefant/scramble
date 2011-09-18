@@ -56,6 +56,9 @@ class Parser:
 
     def error(self, message):
         self.error_pos(message, self.row, self.pos - self.rowpos)
+    
+    def error_token(self, message, tok):
+        self.error_pos(message, tok.row, tok.col)
 
     def add_token(self, kind, value, line, pos):
         token = Token(kind, value, line, pos)
@@ -192,7 +195,6 @@ class Parser:
                 self.pos += 1
                 if c == "?": self.c_tertiary_hack += 1
                 if c == ":": self.c_tertiary_hack -= 1
-                
 
     def get_tokens(self):
         """
