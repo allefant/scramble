@@ -246,6 +246,15 @@ for (x = 2; x < 10; x += 3) {
 }
 """)
 
+def test_for_range_type():
+    return c_test("""
+for int x in range(2): print(x)
+    """, """
+for (int x = 0; x < 2; x += 1) {
+    print(x);
+}
+""")
+
 G = "\x1b[1;32m"
 R = "\x1b[1;31m"
 O = "\x1b[0m"

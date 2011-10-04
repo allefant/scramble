@@ -416,9 +416,10 @@ class CWriter:
         else:
             p.error_token("Need 1, 2 or 3 parameters for range.", tokens_range[0])
 
-        decl = tokens_variable[:1]
+        for_token = tokens_variable[0]
+        decl = tokens_variable[1:-1]
         v = tokens_variable[-1]
-        tokens2 = decl + [self.openparenthesis]
+        tokens2 = [for_token, self.openparenthesis] + decl
         tokens2 += [v, self.assignment] + a + [self.semicolon]
         tokens2 += [v, self.lowerthan] +  b + [self.semicolon]
         tokens2 += [v, self.increment] + c + [self.closeparenthesis]
