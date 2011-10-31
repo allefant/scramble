@@ -1,3 +1,5 @@
+import os
+
 class MyError(Exception):
     def __init__(self, value):
         self.value = value
@@ -25,7 +27,8 @@ class Token:
     def __init__(self, kind, value, row, col):
         self.kind, self.value, self.row, self.col = kind, value, row, col
     def __repr__(self):
-        return "Token(%d:%d, %d, %s)" % (self.row, self.col, self.kind, repr(self.value))
+        return "Token(%d:%d, %d, %s)" % (self.row, self.col, self.kind,
+            repr(self.value))
 
 class Parser:
     STRING = 0
@@ -34,6 +37,7 @@ class Parser:
     LINE = 3
     BLOCK = 4
     COMMENT = 5
+    INCLUDE = 6
 
     # Combined symbols of length 2 and 3.
     operators2 = ["==", "++", "--", "->", "<<", ">>", "+=", "-=", "*=", "/=",
@@ -132,7 +136,8 @@ class Parser:
             else:
                 epos = self.text.find("#", self.pos)
                 if epos == -1:
-                    self.error("Newline must follow line continuation(\\).")
+                    self.error(
+                        "Newline must follow line continuation(\\).")
                 else:
                     epos = self.text.find("\n", self.pos)
                     self.pos = epos + 1
@@ -141,11 +146,13 @@ class Parser:
 
         elif c in "([{":
             self.balance += 1
-            self.add_token(self.SYMBOL, c, self.row, self.pos - self.rowpos)
+            self.add_token(self.SYMBOL, c, self.row,
+                self.pos - self.rowpos)
             self.pos += 1
         elif c in ")]}":
             self.balance -= 1
-            self.add_token(self.SYMBOL, c, self.row, self.pos - self.rowpos)
+            self.add_token(self.SYMBOL, c, self.row,
+                self.pos - self.rowpos)
             self.pos += 1
         elif c == '\n':
             if self.balance == 0:
@@ -185,13 +192,16 @@ class Parser:
             c2 = self.text[self.pos:self.pos + 2]
             c3 = self.text[self.pos:self.pos + 3]
             if c3 in self.operators3:
-                self.add_token(self.SYMBOL, c3, self.row, self.pos - self.rowpos)
+                self.add_token(self.SYMBOL, c3, self.row,
+                    self.pos - self.rowpos)
                 self.pos += 3
             elif c2 in self.operators2:
-                self.add_token(self.SYMBOL, c2, self.row, self.pos - self.rowpos)
+                self.add_token(self.SYMBOL, c2, self.row,
+                    self.pos - self.rowpos)
                 self.pos += 2
             else:
-                self.add_token(self.SYMBOL, c, self.row, self.pos - self.rowpos)
+                self.add_token(self.SYMBOL, c, self.row,
+                    self.pos - self.rowpos)
                 self.pos += 1
                 if c == "?": self.c_tertiary_hack += 1
                 if c == ":": self.c_tertiary_hack -= 1
@@ -205,6 +215,25 @@ class Parser:
         self.lines = [[]]
         while self.pos < len(self.text):
             self.get_token()
+            
+    def get_includes(self):
+        row = 0
+        while row < len(self.root.value): 
+            node = self.root.value[row]
+            if node.kind == Parser.LINE:
+                line = node.value
+                if line[0].kind == Parser.TOKEN and line[0].value == "include":
+                    path = line[1].value.strip("\"'")
+                    n = os.path.join(os.path.dirname(self.filename), path)
+                    text = open(n, "r").read()
+                    p2 = Parser(n, text)
+                    p2.parse()
+                    node.kind = Parser.INCLUDE
+                    node.value = p2
+                    #self.root.value = self.root.value[:row] +\
+                    #    p2.root.value + self.root.value[row + 1:]
+                    #row += len(p2.root.value) - 1
+            row += 1
 
     def get_blocks(self):
         """
@@ -246,11 +275,12 @@ class Parser:
                     del nested[-1]
                     if col > nested[-1].col:
                         self.error_pos("Unindent does not match" +
-                            " any outer indentation level.", line[0].row,
-                            line[0].col)
+                            " any outer indentation level.",
+                            line[0].row, line[0].col)
                     if col == nested[-1].col: break
                 nested[-1].node.value.append(n2)
 
     def parse(self):
         self.get_tokens()
         self.get_blocks()
+        self.get_includes()

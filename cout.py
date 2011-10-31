@@ -596,6 +596,28 @@ class CWriter:
                         self.code += "\n"
                         self.out_crow += 1
                 self.write_line(s, block)
+            elif s.kind == p.INCLUDE:
+                self.p = s.value
+
+                prev_crow = self.out_crow
+                self.code += "#line 1 \"" + self.p.filename + "\"\n"
+                self.out_crow = 1
+                
+                prev_hrow = self.out_hrow
+                self.header += "#line 1 \"" + self.p.filename + "\"\n"
+                self.out_hrow = 1
+                
+                self.write_block(self.p.root)
+                self.p = p
+                
+                self.out_crow = prev_crow + 1
+                self.code += "#line " + str(self.out_crow) + " \"" +\
+                    self.p.filename + "\"\n"
+                
+                self.out_hrow = prev_hrow + 1
+                self.header += "#line " + str(self.out_hrow) + " \"" +\
+                    self.p.filename + "\"\n"
+                
             else:
                 p.error_pos("Unexpected block.", 0, 0)
 
