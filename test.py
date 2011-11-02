@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from parser import *
 from sout import *
 from cout import *
@@ -15,26 +15,26 @@ def s_test(prog, exp):
     print("<" + code + ">")
     return False
 
-def c_test(prog, exp):
+def c_test(prog, exp, c99 = True):
     exp = exp.strip()
     exp = '#include "test.h"\n' + exp
     p = Parser("test", prog)
     p.parse()
     c = CWriter()
-    code, header = c.generate(p, "test", 1, "_TEST")
+    code, header = c.generate(p, "test", 1, "_TEST", c99)
     code = code.strip()
     if code == exp:
         return True
     print("<" + code + ">")
     return False
 
-def h_test(prog, exp):
+def h_test(prog, exp, c99 = True):
     exp = exp.strip()
     exp = "#ifndef _TEST_TEST_\n#define _TEST_TEST_\n" + exp + "\n#endif"
     p = Parser("test", prog)
     p.parse()
     c = CWriter()
-    code, header = c.generate(p, "test", 1, "_TEST")
+    code, header = c.generate(p, "test", 1, "_TEST", c99)
     header = header.strip()
     if header == exp:
         return True
@@ -76,6 +76,17 @@ for int x = 0 while x < 10 with x++:
 for (int x = 0; x < 10; x++) {
     ;
 }""")
+
+def test_for_noc99():
+    return c_test("""
+for int x = 0 while x < 10 with x++:
+    pass
+""", """
+{int x; for (x = 0; x < 10; x++) {
+    ;
+    }
+}
+""", False)
 
 def test_void():
     return c_test("""

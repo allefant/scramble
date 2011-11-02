@@ -1,13 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import optparse, os
+import argparse, os
 from parser import *
 from sout import *
 from cout import *
 
 def main():
-    op = optparse.OptionParser(add_help_option = False)
-    o = op.add_option
+    op = argparse.ArgumentParser(add_help = False)
+    o = op.add_argument
     o("-?", "--help", action = "help"),
     o("-i", "--input", help = "input file")
     o("-c", "--cfile", help = "c output file")
@@ -18,7 +18,8 @@ def main():
     o("-N", "--no-lines", action = "store_true",
         help = "don't generate #line directives")
     o("-s", "--sfile", help = "scramble output file")
-    options, args = op.parse_args()
+    o("--noc99", action = "store_true", help = "do not use C99")
+    options = op.parse_args()
 
     p = None
     if options.input:
@@ -47,7 +48,7 @@ def main():
         c = CWriter()
         try:
             code, header = c.generate(p, options.name, options.no_lines,
-                options.prefix)
+                options.prefix, not options.noc99)
         except MyError as e:
             print(e)
             exit(1)

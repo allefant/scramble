@@ -1,6 +1,8 @@
 import parser
 
 class CWriter:
+    opencurly = parser.Token(parser.Parser.SYMBOL, "{", 0, 0)
+    closecurly = parser.Token(parser.Parser.SYMBOL, "}", 0, 0)
     openparenthesis = parser.Token(parser.Parser.SYMBOL, "(", 0, 0)
     closeparenthesis = parser.Token(parser.Parser.SYMBOL, ")", 0, 0)
     colon = parser.Token(parser.Parser.SYMBOL, ":", 0, 0)
@@ -363,6 +365,7 @@ class CWriter:
         got_while = False
         got_with = False
 
+        decl = []
         tokens2 = tokens[0:1] + [self.openparenthesis]
         for tok in tokens[1:]:
             if tok.kind == p.TOKEN and tok.value == "while":
@@ -372,7 +375,31 @@ class CWriter:
                 tokens2 += [self.semicolon]
                 got_with = True
             else:
-                tokens2 += [tok]
+                if got_while or got_with:
+                    tokens2 += [tok]
+                else:
+                    decl += [tok]
+
+        if self.use_c99:
+            tokens2 = tokens2[:2] + decl + tokens2[2:]
+        else:
+            equals = 0
+            token_count = 0
+            for i in range(len(decl)):
+                e = decl[i]
+                if e.kind == p.SYMBOL and e.value == "=":
+                    equals = i
+                    break
+                if e.kind == p.TOKEN: token_count += 1
+            if equals and token_count > 1:
+                self.c99_hack = True
+                decltype = decl[:equals]
+                decl = decl[equals - 1:]
+                tokens2 = [self.opencurly] + decltype +\
+                    [self.semicolon] + tokens2[:2] + decl + tokens2[2:]
+            else:
+                tokens2 = tokens2[:2] + decl + tokens2[2:]
+    
         tokens2 += [self.closeparenthesis]
         if not got_while or not got_with:
             p.error_token("For loop syntax is 'for x while y with z'.",
@@ -431,6 +458,7 @@ class CWriter:
         """
         p = self.p
         tokens = s.value[:]
+        c99_hack = False
 
         if tokens:
             # docstring
@@ -489,6 +517,8 @@ class CWriter:
                             tokens[in_pos + 2:])
                     else:
                         tokens = self.handle_for_while(tokens)
+                        c99_hack = self.c99_hack
+                        self.c99_hack = False
                 elif tokens[0].value == "pass":
                     tokens = []
                 elif tokens[0].value == "label":
@@ -574,6 +604,9 @@ class CWriter:
                 self.add_line(self.indent * "    " + "}")
             else:
                 self.add_line(self.indent * "    " + line + ";")
+               
+            if c99_hack:
+                self.add_line(self.indent * "    " + "}")
 
     def write_block(self, b, is_macro = False):
         p = self.p
@@ -599,29 +632,33 @@ class CWriter:
             elif s.kind == p.INCLUDE:
                 self.p = s.value
 
-                prev_crow = self.out_crow
-                self.code += "#line 1 \"" + self.p.filename + "\"\n"
-                self.out_crow = 1
-                
-                prev_hrow = self.out_hrow
-                self.header += "#line 1 \"" + self.p.filename + "\"\n"
-                self.out_hrow = 1
+                if not self.no_lines:
+                    prev_crow = self.out_crow
+                    self.code += "#line 1 \"" + self.p.filename + "\"\n"
+                    self.out_crow = 1
+                    
+                    prev_hrow = self.out_hrow
+                    self.header += "#line 1 \"" + self.p.filename + "\"\n"
+                    self.out_hrow = 1
                 
                 self.write_block(self.p.root)
                 self.p = p
                 
-                self.out_crow = prev_crow + 1
-                self.code += "#line " + str(self.out_crow) + " \"" +\
-                    self.p.filename + "\"\n"
-                
-                self.out_hrow = prev_hrow + 1
-                self.header += "#line " + str(self.out_hrow) + " \"" +\
-                    self.p.filename + "\"\n"
+                if not self.no_lines:
+                    self.out_crow = prev_crow + 1
+                    self.code += "#line " + str(self.out_crow) + " \"" +\
+                        self.p.filename + "\"\n"
+                    
+                    self.out_hrow = prev_hrow + 1
+                    self.header += "#line " + str(self.out_hrow) + " \"" +\
+                        self.p.filename + "\"\n"
                 
             else:
                 p.error_pos("Unexpected block.", 0, 0)
 
-    def generate(self, p, name, no_lines, prefix):
+    def generate(self, p, name, no_lines, prefix, use_c99):
+        self.use_c99 = use_c99
+        self.c99_hack = False
         self.p = p
         self.indent = 0
         self.code = ""
