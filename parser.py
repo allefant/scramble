@@ -210,10 +210,25 @@ class Parser:
         """
         Does tokens, strings, comments, multi-line.
         """
+        
+        def parse(text):
+            self.insert += text
+        
+        self.env = {"parse" : parse}
+        self.insert = ""
         self.balance = 0
         self.semicolon = False
         self.lines = [[]]
         while self.pos < len(self.text):
+            x = self.text[self.pos:self.pos + 11]
+            if x == "***scramble":
+                end = self.text.find("\n***", self.pos)
+                if end >= 0:
+                    meta = self.text[self.pos + 11:end]
+                    eval(compile(meta, "meta", "exec"), self.env)
+                    self.text = self.text[:self.pos] + self.insert +\
+                        self.text[end + 4:]
+                    
             self.get_token()
             
     def get_includes(self):

@@ -84,7 +84,7 @@ for int x = 0 while x < 10 with x++:
 """, """
 {int x; for (x = 0; x < 10; x++) {
     ;
-    }
+}
 }
 """, False)
 
@@ -264,6 +264,16 @@ for int x in range(2): print(x)
 for (int x = 0; x < 2; x += 1) {
     print(x);
 }
+""")
+
+def test_meta():
+    return c_test("""
+***scramble
+x = 2
+parse("print(" + str(x) + ")")
+***
+    """, """
+print(2);
 """)
 
 G = "\x1b[1;32m"
