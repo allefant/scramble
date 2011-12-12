@@ -39,8 +39,8 @@ def parenthesis_balance(l, x, y):
             if b <= 0: return pos
     return pos
 
-inf = file(input)
-ouf = file(output, "w")
+inf = open(input)
+ouf = open(output, "w")
 
 text = inf.read()
 
@@ -88,5 +88,7 @@ text = re.compile(r'#include\s*"(.*)\.h"').sub(r"import \1", text)
 text = re.compile(r'#include\s*<(.*)\.h>').sub(r"import global \1", text)
 # convert struct
 text = re.compile(r"\bstruct\b").sub("class", text)
-
+# adjust for loops
+text = re.compile(r"\bfor\b(.*?);(.*?);(.*?):").sub(r"for\1 while\2 with\3:", text)
+    
 ouf.write(text)
