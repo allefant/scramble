@@ -74,8 +74,8 @@ class CWriter:
                 if word == "None": word = "NULL"
                 if word == "True": word = "1"
                 if word == "False": word = "0"
-                if word == "min": word = "__min"; self.need_min = True
-                if word == "max": word = "__max"; self.need_max = True
+                if word == "min": word = "_scramble_min"; self.need_min = True
+                if word == "max": word = "_scramble_max"; self.need_max = True
                 if word == "with": word = ":" # for bit fields
             if tok.kind == p.SYMBOL:
                 if word == "***": word = "#" # macro string concatenation
@@ -211,6 +211,7 @@ class CWriter:
             if is_global:
                 word = "<" + name + ".h>"
             else:
+                if self.p.ignore_local_imports: return
                 word = '"' + name + '.h"'
             line = "#include " + word
             if is_static:
@@ -315,6 +316,10 @@ class CWriter:
         in_header = self.in_header
         if self.indent == 0 and not is_static:
             self.in_header = True
+        
+        if is_static:
+                self.undef_at_end.append(tokens[0].value)
+        
         if block:
             line = self.format_line(tokens)
             self.in_macro += 1
@@ -641,9 +646,10 @@ class CWriter:
                     self.header += "#line 1 \"" + self.p.filename + "\"\n"
                     self.out_hrow = 1
                 
+                self.undef_at_end = []
                 self.write_block(self.p.root)
                 self.p = p
-                
+
                 if not self.no_lines:
                     self.out_crow = prev_crow + 1
                     self.code += "#line " + str(self.out_crow) + " \"" +\
@@ -652,6 +658,10 @@ class CWriter:
                     self.out_hrow = prev_hrow + 1
                     self.header += "#line " + str(self.out_hrow) + " \"" +\
                         self.p.filename + "\"\n"
+                
+                for u in self.undef_at_end:
+                    self.code += "#undef " + u + "\n"
+                    self.out_crow += 1
                 
             else:
                 p.error_pos("Unexpected block.", 0, 0)
@@ -675,6 +685,7 @@ class CWriter:
         self.type_cdecl = ""
         self.type_hdecl = ""
         self.in_macro = 0
+        self.undef_at_end = []
 
         self.write_block(p.root)
 
@@ -684,8 +695,8 @@ class CWriter:
         code = ""
         if not no_lines: code += self.note
         code += "#include \"" + name + ".h\"\n"
-        if self.need_min: code += "#define __min(x, y) ((y) < (x) ? (y) : (x))\n"
-        if self.need_max: code += "#define __max(x, y) ((y) > (x) ? (y) : (x))\n"
+        if self.need_min: code += "#define _scramble_min(x, y) ((y) < (x) ? (y) : (x))\n"
+        if self.need_max: code += "#define _scramble_max(x, y) ((y) > (x) ? (y) : (x))\n"
         code += self.type_cdecl
         code += self.code
         if not no_lines: code += self.note

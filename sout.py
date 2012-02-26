@@ -45,6 +45,9 @@ class SWriter:
                 self.indent += 1
                 self.write_block(s)
                 self.indent -= 1
+            elif s.kind == p.INCLUDE:
+                self.code += "include\n"
+                self.write_block(s.value.root)
 
     def generate(self, p):
         self.p = p

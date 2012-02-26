@@ -53,6 +53,8 @@ class Parser:
         self.rowpos = 0
         self.c_tertiary_hack = 0
         self.retain_comments = comments
+        self.ignore_local_imports = False
+        self.prefix_static = ""
 
     def error_pos(self, message, l, o):
         message = "%s: %d/%d: %s" % (self.filename, l, o, message)
@@ -226,6 +228,9 @@ class Parser:
                 if end >= 0:
                     meta = self.text[self.pos + 11:end]
                     eval(compile(meta, "meta", "exec"), self.env)
+                    remove_rows = self.text[self.pos:end + 4].count("\n")
+                    insert_rows = self.insert.count("\n")
+                    self.row += remove_rows - insert_rows
                     self.text = self.text[:self.pos] + self.insert +\
                         self.text[end + 4:]
                     
@@ -242,6 +247,12 @@ class Parser:
                     n = os.path.join(os.path.dirname(self.filename), path)
                     text = open(n, "r").read()
                     p2 = Parser(n, text)
+                    if len(line) > 2:
+                        if line[2].value == "ignore_local_imports":
+                            p2.ignore_local_imports = True
+                        if len(line) > 3:
+                            if line[3].kind == Parser.STRING:
+                                p2.prefix_local = line[3].value
                     p2.parse()
                     node.kind = Parser.INCLUDE
                     node.value = p2

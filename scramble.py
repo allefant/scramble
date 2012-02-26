@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import argparse, os
+import argparse, os, sys
 from parser import *
 from sout import *
 from cout import *
+import join
 
 def main():
     op = argparse.ArgumentParser(add_help = False)
@@ -17,12 +18,21 @@ def main():
     o("-p", "--prefix", help = "header guard prefix", default = "")
     o("-N", "--no-lines", action = "store_true",
         help = "don't generate #line directives")
-    o("-s", "--sfile", help = "scramble output file")
+    o("-s", "--sfile", help = "intermediate code output file")
     o("--noc99", action = "store_true", help = "do not use C99")
+    o("-j", "--join", nargs = "+", help = "files to join")
+    o("-o", "--output", help = "source code output file")
     options = op.parse_args()
 
     p = None
-    if options.input:
+    
+    if options.join:
+        if options.output:
+            f = open(options.output, "w")
+        else:
+            f = sys.stdout
+        join.join(options.join, f)
+    elif options.input:
         text = open(options.input, "r").read()
         p = Parser(options.input, text, comments = options.comments)
         try:
