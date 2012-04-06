@@ -115,7 +115,7 @@ class CWriter:
                 if word.startswith("'''") or word.startswith('"""'):
                     if word[-3:] == word[:3]:
                         new_word = ""
-                        new_rows = word[3:-3].split("\n")
+                        new_rows = word[3:-3].replace('"', '\\"').split("\n")
                         for i in range(len(new_rows)):
                             if i > 0: new_word += (1 + self.indent) * "    "
                             new_word += '"' + new_rows[i]

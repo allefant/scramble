@@ -279,14 +279,14 @@ print(2);
 def test_triple():
     return c_test("""
 x = '''
-A
-B
+A"
+B'
 C
 '''
     """, r"""
 x = "\n"
-    "A\n"
-    "B\n"
+    "A\"\n"
+    "B'\n"
     "C\n"
     "";
 """)
