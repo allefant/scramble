@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import argparse, os, sys
 from parser import *
 from sout import *
@@ -28,12 +27,13 @@ def main():
     
     if options.join:
         if options.output:
-            f = open(options.output, "w")
+            f = open(options.output, "wb")
         else:
             f = sys.stdout
         join.join(options.join, f)
     elif options.input:
-        text = open(options.input, "r").read()
+        text = open(options.input, "rb").read().decode("utf8")
+
         p = Parser(options.input, text, comments = options.comments)
         try:
             p.parse()
@@ -51,8 +51,8 @@ def main():
     if p and options.sfile:
         s = SWriter()
         code = s.generate(p)
-        f = open(options.sfile, "w")
-        f.write(code)
+        f = open(options.sfile, "wb")
+        f.write(code.encode("utf8"))
 
     if p and (options.cfile or options.hfile):
         c = CWriter()
@@ -63,11 +63,11 @@ def main():
             print(e)
             exit(1)
         if options.cfile:
-            f = open(options.cfile, "w")
-            f.write(code)
+            f = open(options.cfile, "wb")
+            f.write(code.encode("utf8"))
         if options.hfile:
-            f = open(options.hfile, "w")
-            f.write(header)
+            f = open(options.hfile, "wb")
+            f.write(header.encode("utf8"))
 
 if __name__ == "__main__":
     main()

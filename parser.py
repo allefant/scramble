@@ -221,6 +221,9 @@ class Parser:
         self.balance = 0
         self.semicolon = False
         self.lines = [[]]
+        
+        if self.text.startswith("#!/usr/bin/env python"): return
+        
         while self.pos < len(self.text):
             x = self.text[self.pos:self.pos + 11]
             if x == "***scramble":
@@ -245,6 +248,7 @@ class Parser:
                 if line[0].kind == Parser.TOKEN and line[0].value == "include":
                     path = line[1].value.strip("\"'")
                     n = os.path.join(os.path.dirname(self.filename), path)
+                    print("including " + n)
                     text = open(n, "r").read()
                     p2 = Parser(n, text)
                     if len(line) > 2:

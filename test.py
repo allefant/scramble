@@ -276,6 +276,21 @@ parse("print(" + str(x) + ")")
 print(2);
 """)
 
+def test_triple():
+    return c_test("""
+x = '''
+A
+B
+C
+'''
+    """, r"""
+x = "\n"
+    "A\n"
+    "B\n"
+    "C\n"
+    "";
+""")
+
 G = "\x1b[1;32m"
 R = "\x1b[1;31m"
 O = "\x1b[0m"
