@@ -266,6 +266,16 @@ for (int x = 0; x < 2; x += 1) {
 }
 """)
 
+def test_for_in():
+    return c_test("""
+for MyElem *x in MyArray *arr: handle(x)
+    """, """
+{MyArrayIterator __iter__ = MyArrayIterator_first(arr) ; for (MyElem * x = MyArrayIterator_item(arr, & __iter__) ; MyArrayIterator_next(arr, & __iter__) ; x = MyArrayIterator_item(arr, & __iter__)) {
+    handle(x);
+}
+}
+""")
+
 def test_meta():
     return c_test("""
 ***scramble

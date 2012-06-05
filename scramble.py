@@ -3,6 +3,7 @@ import argparse, os, sys
 from parser import *
 from sout import *
 from cout import *
+from ctypesout import *
 import join
 
 def main():
@@ -21,6 +22,7 @@ def main():
     o("--noc99", action = "store_true", help = "do not use C99")
     o("-j", "--join", nargs = "+", help = "files to join")
     o("-o", "--output", help = "source code output file")
+    o("-t", "--ctypes", help = "ctypes output file")
     options = op.parse_args()
 
     p = None
@@ -68,6 +70,12 @@ def main():
         if options.hfile:
             f = open(options.hfile, "wb")
             f.write(header.encode("utf8"))
+
+    if p and options.ctypes:
+        w = CTypesWriter()
+        code = w.generate(p)
+        f = open(options.ctypes, "wb")
+        f.write(code.encode("utf8"))
 
 if __name__ == "__main__":
     main()

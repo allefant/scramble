@@ -236,6 +236,14 @@ class Parser:
                     self.row += remove_rows - insert_rows
                     self.text = self.text[:self.pos] + self.insert +\
                         self.text[end + 4:]
+
+            x = self.text[self.pos:self.pos + 7]
+            if x == '***"""\n':
+                end = self.text.find('\n"""***', self.pos)
+                if end >= 0:
+                    remove_rows = self.text[self.pos:end + 7].count("\n")
+                    self.row += remove_rows
+                    self.text = self.text[:self.pos] + self.text[end + 7:]
                     
             self.get_token()
             

@@ -78,6 +78,6 @@ def join(names, output):
                 
         prefix = name.replace("/", "_")
         if prefix.endswith(".py"): prefix = prefix[:-3]
-        output.write("include \"" + name + "\" ignore_local_imports \"" +
-            prefix + "\"\n")
+        output.write(("include \"" + name + "\" ignore_local_imports \"" +
+            prefix + "\"\n").encode("utf8"))
         already.add(name)
