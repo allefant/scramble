@@ -109,7 +109,9 @@ class CWriter:
                             pass
                         else:
                             line += " "
-                        
+                    elif tok.kind == p.STRING:
+                        # handles e.g. x = L'♥'
+                        line += ""    
                     else:
                         line += " "
             if tok.kind == p.STRING:
