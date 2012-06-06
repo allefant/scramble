@@ -229,6 +229,7 @@ class Parser:
             if x == "***scramble":
                 end = self.text.find("\n***", self.pos)
                 if end >= 0:
+                    self.insert = ""
                     meta = self.text[self.pos + 11:end]
                     eval(compile(meta, "meta", "exec"), self.env)
                     remove_rows = self.text[self.pos:end + 4].count("\n")
