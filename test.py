@@ -257,6 +257,15 @@ for (x = 2; x < 10; x += 3) {
 }
 """)
 
+def test_for_range4():
+    return c_test("""
+for x in range(9, 2, -2): print(x)
+    """, """
+for (x = 9; x > 2; x += - 2) {
+    print(x);
+}
+""")
+
 def test_for_range_type():
     return c_test("""
 for int x in range(2): print(x)

@@ -8,6 +8,7 @@ class CWriter:
     colon = parser.Token(parser.Parser.SYMBOL, ":", 0, 0)
     assignment = parser.Token(parser.Parser.SYMBOL, "=", 0, 0)
     lowerthan = parser.Token(parser.Parser.SYMBOL, "<", 0, 0)
+    greaterthan = parser.Token(parser.Parser.SYMBOL, ">", 0, 0)
     increment = parser.Token(parser.Parser.SYMBOL, "+=", 0, 0)
     semicolon = parser.Token(parser.Parser.SYMBOL, ";", 0, 0)
     comma = parser.Token(parser.Parser.SYMBOL, ",", 0, 0)
@@ -458,14 +459,20 @@ class CWriter:
             a = [parser.Token(parser.Parser.TOKEN, "0", 0, 0)]
             b = range_parts[0]
             c = [parser.Token(parser.Parser.TOKEN, "1", 0, 0)]
+            comparison = self.lowerthan
         elif len(range_parts) == 2:
             a = range_parts[0]
             b = range_parts[1]
             c = [parser.Token(parser.Parser.TOKEN, "1", 0, 0)]
+            comparison = self.lowerthan
         elif len(range_parts) == 3:
             a = range_parts[0]
             b = range_parts[1]
             c = range_parts[2]
+            if c[0].value.startswith("-"):
+                comparison = self.greaterthan
+            else:
+                comparison = self.lowerthan
         else:
             p.error_token("Need 1, 2 or 3 parameters for range.", tokens_range[0])
 
@@ -474,7 +481,7 @@ class CWriter:
         v = tokens_variable[-1]
         tokens2 = [for_token, self.openparenthesis] + decl
         tokens2 += [v, self.assignment] + a + [self.semicolon]
-        tokens2 += [v, self.lowerthan] +  b + [self.semicolon]
+        tokens2 += [v, comparison] +  b + [self.semicolon]
         tokens2 += [v, self.increment] + c + [self.closeparenthesis]
         return tokens2
 
