@@ -510,7 +510,10 @@ class CWriter:
         
         itertype_token = parser.Token(parser.Parser.TOKEN, type_token.value +
             "Iterator", 0, 0)
-        iter_token = parser.Token(parser.Parser.TOKEN, "__iter__", 0, 0)
+
+        iter_name = "__iter%d__" % self.iter_id
+        self.iter_id += 1
+        iter_token = parser.Token(parser.Parser.TOKEN, iter_name, 0, 0)
         first_token = parser.Token(parser.Parser.TOKEN, type_token.value +
             "Iterator_first", 0, 0)
         item_token = parser.Token(parser.Parser.TOKEN, type_token.value +
@@ -766,6 +769,7 @@ class CWriter:
         self.type_hdecl = ""
         self.in_macro = 0
         self.undef_at_end = []
+        self.iter_id = 0
 
         self.write_block(p.root)
 
