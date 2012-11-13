@@ -52,7 +52,7 @@ def print_diff(new, old):
 def c_test(prog, exp):
     exp = exp.strip()
     exp = '#include "test.h"\n' + exp
-    p = Parser("test", prog)
+    p = Parser("test", prog, comments = True)
     try:
         p.parse()
         c = CWriter()
@@ -66,6 +66,7 @@ def c_test(prog, exp):
         return True
 
     print_diff(code, exp)
+    print(code)
 
     s = SWriter()
     code = s.generate(p)
@@ -101,14 +102,14 @@ int a(int x) {
 
 def test_sameline2():
     return c_test("""
-while (a = 1); a = 2 # a commment
-while (a = 1): a = 2
+while (a = 1); a = 2 # a comment
+while (a = 1): a = 2 # another one
 """, """
 while ((a = 1)) {
 }
-a = 2;
+a = 2 /* a comment */;
 while ((a = 1)) {
-    a = 2;
+    a = 2 /* another one */;
 }
 """)
 
@@ -605,6 +606,14 @@ extern A * a;
 extern double const pi;
 """) 
 
+def test_global_var_comment():
+    return c_test("""
+# blah
+int b
+""", """
+// blah
+int b;
+""") 
 
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None

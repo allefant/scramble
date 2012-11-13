@@ -84,6 +84,9 @@ class CWriter:
         elif tok.kind == p.OPERATOR:
             word = self.format_expression(tok)
 
+        elif tok.kind == p.COMMENT:
+            word = "/*" + tok.value + " */"
+
         else:
             word = "???"
 
@@ -670,14 +673,16 @@ class CWriter:
                 if b.value[i].kind == p.BLOCK:
                     block = b.value[i]
                     i += 1
+
+            if not self.in_header:
+                for c in s.comments:
+                    self.code += self.indent * "    "
+                    self.code += "//"
+                    self.code += c.value.rstrip()
+                    self.code += "\n"
+                    self.out_crow += 1
+                    
             if s.kind == p.LINE:
-                if not self.in_header:
-                    for c in s.comments:
-                        self.code += self.indent * "    "
-                        self.code += "//"
-                        self.code += c.value.rstrip()
-                        self.code += "\n"
-                        self.out_crow += 1
                 self.write_line(s, block)
             elif s.kind == p.STATEMENT:
                 self.handle_statement(s)
