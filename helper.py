@@ -2,6 +2,9 @@ class Parameter:
     name = ""
     declaration = []
 
+    def __repr__(self):
+        return self.name
+
 def parse_parameter_list(p, tokens):
     """
     Given a string of tokens parse it into a tree of parameters.
@@ -12,7 +15,8 @@ def parse_parameter_list(p, tokens):
     """
 
     #print(" ".join([x.value for x in tokens]))
-    
+
+    # split at , but leaving ()
     params = []
     param = []
     balance = 0
@@ -29,8 +33,6 @@ def parse_parameter_list(p, tokens):
             elif param:
                 params += [param]
                 param = []
-        elif tok.kind == p.TOKEN and tok.value == "const":
-            pass # we ignore const
         else:
             param += [tok]
 
@@ -39,35 +41,50 @@ def parse_parameter_list(p, tokens):
 
     params2 = []
     prev = None
+
+    def prev_declaration():
+        if not prev:
+            return []
+        name = prev.name
+        i = 0
+        for i in range(len(prev.declaration)):
+            if prev.declaration[i].kind == p.SYMBOL:
+                if prev.declaration[i].value == "*":
+                    return prev.declaration[:i]
+            if prev.declaration[i].kind == p.TOKEN:
+                if prev.declaration[i].value == name:
+                    return prev.declaration[:i]
+        return prev.declaration
+
     for ptokens in params:
         par = Parameter()
         par.bitfield = None
-        
-        if len(ptokens) == 1:
-            par.declaration = prev.declaration
+        is_pointer = False
+
+        if ptokens[0].kind == p.SYMBOL and ptokens[0].value == "...":
+            par.declaration = [ptokens[0]]
             par.name = ptokens[0].value
             params2.append(par)
             continue
-        if len(ptokens) == 2 and ptokens[0].kind == p.SYMBOL and ptokens[0].value == "*":
-            par.declaration = prev.declaration + [ptokens[0]]
-            par.name = ptokens[1].value
+
+        if ptokens[0].kind == p.SYMBOL and ptokens[0].value == "*":
+            is_pointer = True
+        
+        if len(ptokens) == 1:
+            par.declaration = prev_declaration() + [ptokens[0]]
+            par.name = ptokens[0].value
             params2.append(par)
             continue
 
-        if len(ptokens) == 3:
-            for i in range(3):
-                if ptokens[i].kind != p.SYMBOL or ptokens[i].value != ".":
-                    break
-            else:
-                par.declaration = ptokens
-                par.name = ""
-                params2.append(par)
-                continue
+        if is_pointer:
+            par.declaration = prev_declaration()
+        else:
+            par.declaration = []
 
         last = ptokens[-1]
         if len(ptokens) >= 3 and last.kind == p.TOKEN and\
             last.value[0] in "0123456789" and ptokens[-2].value == "with":
-            par.declaration = ptokens[:-3]
+            par.declaration += ptokens[:-2]
             par.name = ptokens[-3].value
             par.bitfield = last.value
         elif last.value == ")":
@@ -79,21 +96,39 @@ def parse_parameter_list(p, tokens):
             for i in range(i + 1, len(ptokens)):
                 if ptokens[i].value == "*":
                     break
-            par.declaration = ptokens[:i + 1] + ptokens[i + 2:]
+            par.declaration += ptokens
             par.name = ptokens[i + 1].value
         elif last.value == "]":
             # e.g. int x[12]
             for i in range(len(ptokens)):
                 if ptokens[i].value == "[":
                     break
-            par.declaration = ptokens[:i - 1] + ptokens[i:]
+            par.declaration += ptokens
             par.name = ptokens[i - 1].value
         else:
             par.name = last.value
-            par.declaration = ptokens[:-1]
+            par.declaration += ptokens
 
         params2.append(par)
         prev = par
 
     #print(": " + ", ".join([" ".join([y.value for y in x.declaration]) + " " + x.name for x in params2]))
     return params2
+
+# tokens[x] is an open parenthesis. Return y so that tokens[y] is the matching
+# closing parenthesis or else None.
+def find_matching_parenthesis(p, tokens, x):
+    balance = 0
+    y = x
+    while y < len(tokens):
+        if tokens[y].kind == p.SYMBOL:
+            if tokens[y].value == "(":
+                if balance == 0 and y != x: # did not start at a (
+                    return None
+                balance += 1
+            if tokens[y].value == ")":
+                balance -= 1
+                if balance == 0:
+                    return y
+        y += 1
+    return None

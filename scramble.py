@@ -4,6 +4,7 @@ from parser import *
 from sout import *
 from cout import *
 from ctypesout import *
+import analyzer
 import join
 
 def main():
@@ -19,7 +20,6 @@ def main():
     o("-N", "--no-lines", action = "store_true",
         help = "don't generate #line directives")
     o("-s", "--sfile", help = "intermediate code output file")
-    o("--noc99", action = "store_true", help = "do not use C99")
     o("-j", "--join", nargs = "+", help = "files to join")
     o("-o", "--output", help = "source code output file")
     o("-t", "--ctypes", help = "ctypes output file")
@@ -60,7 +60,7 @@ def main():
         c = CWriter()
         try:
             code, header = c.generate(p, options.name, options.no_lines,
-                options.prefix, not options.noc99)
+                options.prefix)
         except MyError as e:
             print(e)
             exit(1)

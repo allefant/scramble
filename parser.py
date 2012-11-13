@@ -1,4 +1,5 @@
 import os
+import analyzer
 
 class MyError(Exception):
     def __init__(self, value):
@@ -16,6 +17,8 @@ class Node:
     def __init__(self, kind, value):
         self.kind, self.value = kind, value
         self.comments = []
+        self.is_static = False
+        self.is_global = False
     def __repr__(self):
         return "Node(%d, %s)" % (self.kind, repr(self.value))
 
@@ -34,15 +37,28 @@ class Parser:
     STRING = 0
     TOKEN = 1
     SYMBOL = 2
+
     LINE = 3
     BLOCK = 4
     COMMENT = 5
     INCLUDE = 6
 
+    FUNCTION = 7 # declaration
+    VARIABLE = 8 # declaration
+    TYPE = 9 # declaration
+    OPERATOR = 10
+    MACRO = 11 # declaration
+    STATEMENT = 12
+    IMPORT = 13
+    PREPROCESSOR = 14
+    ENUM = 15
+    LABEL = 16
+    GOTO = 17
+
     # Combined symbols of length 2 and 3.
     operators2 = ["==", "++", "--", "->", "<<", ">>", "+=", "-=", "*=", "/=",
         "|=", "&=", "^=", "~=", ">=", "<=", "!=", "&&", "||", "%="]
-    operators3 = ["***", ">>=", "<<="]
+    operators3 = ["***", ">>=", "<<=", "..."]
 
     def __init__(self, filename, text, comments = False):
         self.text = text.replace("\r", "")
@@ -64,7 +80,8 @@ class Parser:
         self.error_pos(message, self.row, self.pos - self.rowpos)
     
     def error_token(self, message, tok):
-        self.error_pos(message, tok.row, tok.col)
+        row, col = get_row_col(tok)
+        self.error_pos(message, row, col)
 
     def add_token(self, kind, value, line, pos):
         token = Token(kind, value, line, pos)
@@ -215,7 +232,7 @@ class Parser:
         
         def parse(text):
             self.insert += text
-        
+
         self.env = {"parse" : parse}
         self.insert = ""
         self.balance = 0
@@ -323,3 +340,16 @@ class Parser:
         self.get_tokens()
         self.get_blocks()
         self.get_includes()
+
+        self.analyzer = analyzer.Analyzer(self)
+        self.analyzer.analyze()
+
+def get_row_col(node):
+
+    if isinstance(node, Token):
+        return node.row, node.col
+
+    if node.kind == Parser.PREPROCESSOR:
+        return node.name.row, node.name.col
+    
+    return get_row_col(node.value[0])
