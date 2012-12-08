@@ -90,6 +90,12 @@ class CWriter:
         else:
             word = "???"
 
+        if tok.comments:
+            word += " /* "
+            for ctok in tok.comments:
+                word += ctok.value.strip()
+            word += " */"
+
         return word
 
     def format_expression(self, token):

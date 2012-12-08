@@ -29,6 +29,7 @@ class Token:
     """
     def __init__(self, kind, value, row, col):
         self.kind, self.value, self.row, self.col = kind, value, row, col
+        self.comments = []
     def __repr__(self):
         return "Token(%d:%d, %d, %s)" % (self.row, self.col, self.kind,
             repr(self.value))
@@ -308,11 +309,25 @@ class Parser:
             if line[0].kind == self.COMMENT:
                 comments.extend(line)
                 continue
+
+            # remove comments
+            if self.retain_comments:
+                prev = None
+                for tok in line:
+                    if tok.kind == self.COMMENT:
+                        if prev:
+                            prev.comments = [tok]
+                        else:
+                            self.error_token("Comment not possible here", tok)
+                    prev = tok
+                line = [tok for tok in line if tok.kind != self.COMMENT]
+
             row = line[0].row
             col = line[0].col
             n2 = Node(self.LINE, line)
             n2.comments.extend(comments)
             comments = []
+
             if col == nested[-1].col:
                 nested[-1].node.value.append(n2)
             elif col > nested[-1].col:
