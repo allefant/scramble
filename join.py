@@ -9,37 +9,48 @@ def parse_block(p, b, fname):
         if s.kind == p.INCLUDE:
             parse_block(p, s.value.root)
             continue
-        if s.kind == p.LINE:
-            expect_class = False
-            tokens = s.value
-            if not tokens: continue
-            if tokens[0].kind != p.TOKEN: continue
-            if tokens[0].value == "class":
-                name = tokens[1].value
-                in_file[name] = fname
-                expect_class = True
-        if s.kind == p.BLOCK and expect_class:
-            if expect_class:
-                expect_class = False
+        if s.kind == p.TYPE:
+            if s.value[0].value in ["struct", "union"]:
+                name = s.value[1].value
+            elif s.value[0].value == "typedef":
+                name = s.value[-1].value
+            in_file[name] = fname
 
-                for s2 in s.value:
-                    if s2.kind == p.LINE:
-                        tokens2 = s2.value
-                        
-                        if len(tokens2) >= 2:
-                            the_type = tokens2[0].value
-                            # pointer
-                            if tokens2[1].value == "*":
-                                continue
-                            # function pointer
-                            if tokens2[1].value == "(":
-                                continue
-                            deps = dep.get(name, [])
-                            dep[name] = deps + [the_type]
-                            
+            if s.block:
+                for line in s.block.value:
+                    if line.kind != p.LINE:
+                        p.error_token("expected field declaration", line)
+
+                    def parse_field(f):
+                        if line.value[0].kind != p.OPERATOR:
+                            # probably a comment line
+                            return
+                        fields = f.value
+                        if fields[0].kind == p.TOKEN:
+                            the_type = fields[0].value
+                        elif fields[0].kind == p.SYMBOL:
+                            if fields[0].value == ',':
+                                parse_field(fields[1])
+                                return
+                            elif fields[0].value == '*':
+                                # we ignore pointers
+                                return
+                            else:
+                                # TODO
+                                return
+                        else:
+                            # TODO: could for example be a an array
+                            return
+
+                        deps = dep.get(name, [])
+                        dep[name] = deps + [the_type]
+
+                    parse_field(line.value[0])
+            else:
+                pass # probably a typedef
 
 def join(names, output):
-  
+
     for name in names:
         text = open(name, "r").read()
         p = Parser(name, text)
@@ -50,21 +61,25 @@ def join(names, output):
             exit(1)
 
         parse_block(p, p.root, name)
-    
-    types = set(dep.keys())
-    for t in types:
-        dep[t] = [x for x in dep[t] if x in types]
-        if not dep[t]: del dep[t]
-    
+
+    types = set(in_file.keys())
+
     fdep = {}
     for t, needs in dep.items():
-        fdep[in_file[t]] = fdep.get(in_file[t], []) + [in_file[x] for x in needs if in_file[x] != in_file[t]]
+        fdep[in_file[t]] = fdep.get(in_file[t], [])
+
+        for need in needs:
+            if need not in in_file:
+                continue
+            if in_file[need] == in_file[t]:
+                continue
+            fdep[in_file[t]].append(in_file[need])
 
     already = set()
     later = set(names)
     while later:
         name = later.pop()
-        
+
         def skip():
             if name in fdep:
                 for d in fdep[name]:

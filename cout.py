@@ -362,7 +362,8 @@ class CWriter:
             self.in_header = True
         
         if s.is_static:
-            self.undef_at_end.append(tokens[0].value)
+            macro_name = self.get_flat_list(tokens)[0].value
+            self.undef_at_end.append(macro_name)
         
         if s.block:
             line = self.format_line(tokens)
@@ -454,6 +455,8 @@ class CWriter:
                     r += self.get_flat_list(op.value[1:])
                 elif is_sym(op.value[0], ","):
                     r += self.get_flat_list(op.value[1:])
+                elif op.value[0].kind == p.TOKEN:
+                    r += self.get_flat_list(op.value)
                 else:
                     r += [op]
             elif op.kind != p.SYMBOL:

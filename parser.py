@@ -366,5 +366,9 @@ def get_row_col(node):
 
     if node.kind == Parser.PREPROCESSOR:
         return node.name.row, node.name.col
-    
+
+    if node.kind == Parser.INCLUDE:
+        return 0, 0
+   
     return get_row_col(node.value[0])
+   
