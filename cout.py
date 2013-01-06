@@ -110,7 +110,9 @@ class CWriter:
                 else:
                     r += " "
             else:
-                r += " "
+                # handles e.g. x = L'♥'
+                if token.value[1].kind != p.STRING:
+                    r += " "
             r += self.format_op(token.value[1])
             return r
 
@@ -178,10 +180,6 @@ class CWriter:
         
         if prev.kind == p.SYMBOL:
             return True
-
-        if tok.kind == p.STRING:
-            # handles e.g. x = L'♥'
-            return False
 
         # handles e.g. Type variable
         return True

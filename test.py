@@ -613,7 +613,18 @@ int b
 """, """
 // blah
 int b;
-""") 
+""")
+
+def test_multibyte():
+    return c_test("""
+if c == L'♥': pass
+""", """
+if (c == L'♥') {
+    ;
+}
+""")  
+
+
 
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
