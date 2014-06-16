@@ -63,7 +63,7 @@ class Parser:
 
     def __init__(self, filename, text, comments = False):
         self.text = text.replace("\r", "")
-        if text[-1] != "\n": text += "\n"
+        if len(text) == 0 or text[-1] != "\n": text += "\n"
         self.pos = 0
         self.filename = filename
         self.row = 1
