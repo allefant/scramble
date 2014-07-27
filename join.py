@@ -39,7 +39,7 @@ def parse_block(p, b, fname):
                                 # TODO
                                 return
                         else:
-                            # TODO: could for example be a an array
+                            # TODO: could for example be an array
                             return
 
                         deps = dep.get(name, [])

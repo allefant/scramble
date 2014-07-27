@@ -1,5 +1,13 @@
 import helper, parser
 
+class Variable:
+    def __init__(self, name, declaration):
+        self.declaration = declaration
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
 class Analyzer:
     def __init__(self, parser):
         self.parser = parser
@@ -241,7 +249,7 @@ class Analyzer:
         p = self.parser
 
         if statement.kind == self.parser.BLOCK:
-            self.analyze_block(statement.value)
+            self.analyze_block(statement)
             return
 
         self.transform_row(statement.value)
@@ -394,7 +402,9 @@ class Analyzer:
             if self.is_tok(tokens[ti], name):
                 return ti
 
-    def analyze_block(self, nodes):
+    def analyze_block(self, block_node):
+        block_node.variables = []
+        nodes = block_node.value
         p = self.parser
         ni = 0
 
@@ -593,9 +603,28 @@ class Analyzer:
 
                 self.transform_statement(node)
 
+                # detect if the statement declares a variable
+                # TODO: As long as we don't have knowledge of which tokens
+                # are types, this is only a crude heuristic.
+                def check_variable_declaration(first):
+                    if first.kind == self.parser.OPERATOR:
+                        tokens = first.value
+                        op = tokens[0]
+                        if op.kind == self.parser.SYMBOL:
+                            if op.value == "*":
+                                if len(tokens) == 3:
+                                    v = Variable(first.value[2].value,
+                                        first.value)
+                                    block_node.variables.append(v)
+                            if op.value == "=":
+                                check_variable_declaration(tokens[1])
+
+
+                check_variable_declaration(node.value[0])
+
             if node.kind == self.parser.BLOCK:
-                self.analyze_block(node.value)
+                self.analyze_block(node)
                 
 
     def analyze(self):
-        self.analyze_block(self.root.value)
+        self.analyze_block(self.root)

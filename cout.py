@@ -1,4 +1,4 @@
-import parser, analyzer
+import parser, analyzer, helper
 
 is_sym = analyzer.Analyzer.is_sym
 is_op = analyzer.Analyzer.is_op
@@ -154,7 +154,33 @@ class CWriter:
                 r += self.format_op(left)
             if op not in self.operator_hug_left:
                 r += " "
-        r += self.format_op(token.value[0])
+
+        operator_value = self.format_op(token.value[0])
+        
+        # special recognition of . as ->
+        if token.value[0].kind == p.SYMBOL:
+            if token.value[0].value == ".":
+                pointer = token.value[1]
+                if pointer.kind == p.TOKEN:
+                    # see if it is a pointer declared in the current block
+                    # or a parent block
+                    for b in self.current_block:
+                        for parameter in b.variables:
+                            if parameter.name == pointer.value:
+                                if helper.pointer_indirection(
+                                        parameter.declaration, p) > 0:
+                                    operator_value = "->"
+
+                    # see if it is a pointer from the parameter list
+                    if self.current_function:
+                        for parameter in self.current_function[-1].parameters:
+                            if parameter.name == pointer.value:
+                                if helper.pointer_indirection(
+                                        parameter.declaration, p) > 0:
+                                    operator_value = "->"
+
+        r += operator_value
+
         if right:
             if op not in self.operator_hug_right:
                 r += " "
@@ -665,6 +691,8 @@ class CWriter:
                     self.add_header_line("extern " + line + ";")
 
     def write_block(self, b, is_macro = False):
+        self.current_block.append(b)
+
         p = self.p
         i = 0
         n = len(b.value)
@@ -696,7 +724,9 @@ class CWriter:
             elif s.kind == p.TYPE:
                 self.handle_class(s)
             elif s.kind == p.FUNCTION:
+                self.current_function.append(s)
                 self.handle_function(s)
+                self.current_function.pop()
             elif s.kind == p.IMPORT:
                 self.handle_import(s.value[1:], s.is_static)
             elif s.kind == p.PREPROCESSOR:
@@ -741,6 +771,7 @@ class CWriter:
             else:
                 row, col = parser.get_row_col(s)
                 p.error_pos("Unexpected node type %d." % s.kind, row, col)
+        self.current_block.pop()
 
     def generate(self, p, name, no_lines, prefix):
         self.p = p
@@ -761,6 +792,8 @@ class CWriter:
         self.in_macro = 0
         self.undef_at_end = []
         self.iter_id = 0
+        self.current_function = []
+        self.current_block = []
 
         self.write_block(p.root)
 

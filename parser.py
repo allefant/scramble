@@ -20,7 +20,7 @@ class Node:
         self.is_static = False
         self.is_global = False
     def __repr__(self):
-        return "Node(%d, %s)" % (self.kind, repr(self.value))
+        return "Node(%s, %s)" % (Parser.kind_name(self.kind), repr(self.value))
 
 class Token:
     """
@@ -31,7 +31,8 @@ class Token:
         self.kind, self.value, self.row, self.col = kind, value, row, col
         self.comments = []
     def __repr__(self):
-        return "Token(%d:%d, %d, %s)" % (self.row, self.col, self.kind,
+        return "Token(%d:%d, %s, %s)" % (self.row, self.col,
+            Parser.kind_name(self.kind),
             repr(self.value))
 
 class Parser:
@@ -60,6 +61,16 @@ class Parser:
     operators2 = ["==", "++", "--", "->", "<<", ">>", "+=", "-=", "*=", "/=",
         "|=", "&=", "^=", "~=", ">=", "<=", "!=", "&&", "||", "%="]
     operators3 = ["***", ">>=", "<<=", "..."]
+
+    @staticmethod
+    def kind_name(x):
+        for k in Parser.__dict__.keys():
+            v = getattr(Parser, k)
+            if type(v) is int:
+                if v == x:
+                    return k
+        return "UNKNOWN(" + str(x) + ")"
+                
 
     def __init__(self, filename, text, comments = False):
         self.text = text.replace("\r", "")

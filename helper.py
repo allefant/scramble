@@ -5,6 +5,23 @@ class Parameter:
     def __repr__(self):
         return self.name
 
+"""
+Returns the number of * before the variable.
+"""
+def pointer_indirection(tokens, p):
+    i = 0
+    par = 0
+    for tok in tokens:
+        if tok.kind == p.SYMBOL:
+            if tok.value == "(":
+                par += 1
+            if tok.value == ")":
+                par -= 1
+            if tok.value == "*":
+                if par == 0:
+                    i += 1
+    return i
+
 def parse_parameter_list(p, tokens):
     """
     Given a string of tokens parse it into a tree of parameters.
@@ -113,7 +130,7 @@ def parse_parameter_list(p, tokens):
         prev = par
 
     #print(": " + ", ".join([" ".join([y.value for y in x.declaration]) + " " + x.name for x in params2]))
-    return params2
+    return params2    
 
 # tokens[x] is an open parenthesis. Return y so that tokens[y] is the matching
 # closing parenthesis or else None.
