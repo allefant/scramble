@@ -102,7 +102,16 @@ class Analyzer:
         if level[left] == 14: return False
         if level[right] == 14: return True
 
-        if level[right] == 15: return True
+        if level[right] == 15:
+            if level[left] == 16:
+                # Special case to handle this:
+                # (A)x.y
+                # Normally (A)x has the highest possible precedence, but in
+                # this case we want (A)(x.y).
+                # A non-hackish solution likely would be to give the type
+                # case its own level (with lower precendence than .).
+                return False
+            return True
         if level[left] == 15: return False
 
         if level[right] == 16: return True
@@ -173,6 +182,7 @@ class Analyzer:
         operation = row[ti - 1]
 
         if operation.kind in [p.TOKEN, p.OPERATOR]:
+
             newop = parser.Node(p.OPERATOR, (operation, operand2))
             del row[ti - 1]
             row[ti - 1] = newop
@@ -618,7 +628,6 @@ class Analyzer:
                                     block_node.variables.append(v)
                             if op.value == "=":
                                 check_variable_declaration(tokens[1])
-
 
                 check_variable_declaration(node.value[0])
 
