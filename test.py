@@ -622,8 +622,19 @@ if c == L'♥': pass
 if (c == L'♥') {
     ;
 }
-""")  
+""")
 
+def test_for_in_access():
+    return c_test("""
+for MyElem *x in MyArray *arr: x.y = 0
+    """, """
+{
+    MyArrayIterator __iter0__ = MyArrayIterator_first(arr);
+    for (MyElem * x = MyArrayIterator_item(arr, &__iter0__); MyArrayIterator_next(arr, &__iter0__); x = MyArrayIterator_item(arr, &__iter0__)) {
+        x->y = 0;
+    }
+}
+""")
 
 
 def main():

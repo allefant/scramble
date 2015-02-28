@@ -568,7 +568,7 @@ class CWriter:
 
         self.add_iline(line)
 
-        line = statement.name.value + " (" # for
+        line = token_for.value + " (" # for
         line += self.format_line(token_decl)
 
         line += " = " + iter_name + "_item(" + container_name + ", "

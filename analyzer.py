@@ -403,8 +403,7 @@ class Analyzer:
 
     def analyze_function(self, name, node, retlist, paramlist):
         node.name = name
-        node.parameters = helper.parse_parameter_list(self.parser,
-            paramlist[1:-1])
+        node.parameters = helper.parse_parameter_list(self.parser, paramlist)
         node.ret = retlist
 
     def find_token_pos(self, tokens, name):
@@ -430,6 +429,22 @@ class Analyzer:
                     node.block = block
                 else:
                     node.block = None
+
+            # detect if the statement declares a variable
+            # TODO: As long as we don't have knowledge of which tokens
+            # are types, this is only a crude heuristic.
+            def check_variable_declaration(first):
+                if first.kind == self.parser.OPERATOR:
+                    tokens = first.value
+                    op = tokens[0]
+                    if op.kind == self.parser.SYMBOL:
+                        if op.value == "*":
+                            if len(tokens) == 3:
+                                v = Variable(first.value[2].value,
+                                    first.value)
+                                block_node.variables.append(v)
+                        if op.value == "=":
+                            check_variable_declaration(tokens[1])
             
             if node.kind == self.parser.LINE:
                 tokens = node.value
@@ -545,6 +560,9 @@ class Analyzer:
                             p.error_token("Invalid for loop.", t)
 
                     self.transform_statement(node)
+
+                    if node.value:
+                        check_variable_declaration(node.value[0])
                     if node.sub_kind:
                         self.transform_row(node.part)
 
@@ -567,24 +585,27 @@ class Analyzer:
 
                     node.is_pointer = False
                     name = tokens[ti + 1]
-                    if self.is_sym(name, "*"):
+                    if len(tokens) > ti + 2 and self.is_sym(name, "*"):
                         del tokens[ti + 1]
                         name = tokens[ti + 1]
                         node.is_pointer = True
 
                     node.parent_class = self.in_class
 
-                    if tokens[ti + 2].value != "(":
-                        p.error_pos("Invalid function definition",
-                            tokens[ti + 2].row, tokens[ti + 2].col)
+                    if len(tokens) == ti + 2:
+                        self.analyze_function(name, node, tokens[:ti], [])
+                    else:
+                        if tokens[ti + 2].value != "(":
+                            p.error_pos("Invalid function definition",
+                                tokens[ti + 2].row, tokens[ti + 2].col)
 
-                    if tokens[-1].value != ")":
-                        p.error_pos("Invalid function definition",
-                            tokens[-1].row, tokens[-1].col)
-                    
-                    self.analyze_function(name, node,
-                        tokens[:ti],
-                        tokens[ti + 2:])
+                        if tokens[-1].value != ")":
+                            p.error_pos("Invalid function definition",
+                                tokens[-1].row, tokens[-1].col)
+                        
+                        self.analyze_function(name, node,
+                            tokens[:ti],
+                            tokens[ti + 3:-1])
                     self.functions[name] = node
 
                     node.kind = self.parser.FUNCTION
@@ -612,22 +633,6 @@ class Analyzer:
                 #    continue
 
                 self.transform_statement(node)
-
-                # detect if the statement declares a variable
-                # TODO: As long as we don't have knowledge of which tokens
-                # are types, this is only a crude heuristic.
-                def check_variable_declaration(first):
-                    if first.kind == self.parser.OPERATOR:
-                        tokens = first.value
-                        op = tokens[0]
-                        if op.kind == self.parser.SYMBOL:
-                            if op.value == "*":
-                                if len(tokens) == 3:
-                                    v = Variable(first.value[2].value,
-                                        first.value)
-                                    block_node.variables.append(v)
-                            if op.value == "=":
-                                check_variable_declaration(tokens[1])
 
                 check_variable_declaration(node.value[0])
 
