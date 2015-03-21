@@ -478,7 +478,7 @@ class Analyzer:
                     self.analyze_class(name, node)
 
                     if not self.in_class:
-                        self.types[name] = node
+                        self.types[name.value] = node
 
                     node.kind = self.parser.TYPE
 

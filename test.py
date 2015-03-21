@@ -636,6 +636,36 @@ for MyElem *x in MyArray *arr: x.y = 0
 }
 """)
 
+def test_class_access():
+    return c_test("""
+static class B:
+    pass
+static class A:
+    B *b
+static class X:
+    A *a
+X *x
+x.a = None
+x.a.b = None
+x.a.b.hu = None
+    """, """
+typedef struct B B;
+typedef struct A A;
+typedef struct X X;
+struct B {
+    ;
+};
+struct A {
+    B * b;
+};
+struct X {
+    A * a;
+};
+X * x;
+x->a = NULL;
+x->a->b = NULL;
+x->a->b->hu = NULL;
+    """)
 
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None

@@ -14,7 +14,7 @@ class Node:
     of a BLOCK are either another, nested BLOCK or a LINE. The children of a
     LINE are not nodes but directly tokens.
     """
-    def __init__(self, kind, value):
+    def __init__(self, kind, value : "List[Node]"):
         self.kind, self.value = kind, value
         self.comments = []
         self.is_static = False

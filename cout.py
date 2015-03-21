@@ -98,7 +98,7 @@ class CWriter:
 
         return word
 
-    def format_expression(self, token):
+    def format_expression(self, token : parser.Node):
         p = self.p
         a = analyzer.Analyzer
 
@@ -156,28 +156,40 @@ class CWriter:
                 r += " "
 
         operator_value = self.format_op(token.value[0])
+
+        def is_pointer(x):
+            if x.kind == p.TOKEN:
+                # see if it is a pointer declared in the current block
+                # or a parent block
+                for b in self.current_block:
+                    for parameter in b.variables:
+                        if parameter.name == x.value:
+                            if helper.pointer_indirection(
+                                    parameter.declaration, p) > 0:
+                                return parameter
+
+                # see if it is a pointer from the parameter list
+                if self.current_function:
+                    for parameter in self.current_function[-1].parameters:
+                        if parameter.name == x.value:
+                            if helper.pointer_indirection(
+                                    parameter.declaration, p) > 0:
+                                return parameter
+            return None
         
         # special recognition of . as ->
         if token.value[0].kind == p.SYMBOL:
             if token.value[0].value == ".":
-                pointer = token.value[1]
-                if pointer.kind == p.TOKEN:
-                    # see if it is a pointer declared in the current block
-                    # or a parent block
-                    for b in self.current_block:
-                        for parameter in b.variables:
-                            if parameter.name == pointer.value:
-                                if helper.pointer_indirection(
-                                        parameter.declaration, p) > 0:
-                                    operator_value = "->"
-
-                    # see if it is a pointer from the parameter list
-                    if self.current_function:
-                        for parameter in self.current_function[-1].parameters:
-                            if parameter.name == pointer.value:
-                                if helper.pointer_indirection(
-                                        parameter.declaration, p) > 0:
-                                    operator_value = "->"
+                chain = helper.find_dots(p, token)
+                param = is_pointer(chain[0])
+                for c in chain[1:-1]:
+                    param = helper.get_member(param, c.value, p)
+                    if helper.pointer_indirection(param.declaration, p) > 0:
+                        pass
+                    else:
+                        break
+                else:
+                    operator_value = "->"
 
         r += operator_value
 
