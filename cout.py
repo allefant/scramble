@@ -157,6 +157,7 @@ class CWriter:
 
         operator_value = self.format_op(token.value[0])
 
+        # If x is a pointer, return the type declaration, else None
         def is_pointer(x):
             if x.kind == p.TOKEN:
                 # see if it is a pointer declared in the current block
@@ -182,14 +183,19 @@ class CWriter:
             if token.value[0].value == ".":
                 chain = helper.find_dots(p, token)
                 param = is_pointer(chain[0])
+                if not param:
+                    chain = []
                 for c in chain[1:-1]:
-                    param = helper.get_member(param, c.value, p)
+                    param = helper.get_pointer_member(param, c.value, p)
+                    if not param:
+                        break
                     if helper.pointer_indirection(param.declaration, p) > 0:
                         pass
                     else:
                         break
                 else:
-                    operator_value = "->"
+                    if param:
+                        operator_value = "->"
 
         r += operator_value
 

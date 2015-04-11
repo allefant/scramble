@@ -583,6 +583,19 @@ class Analyzer:
                         p.error_pos("Definition without name.",
                             tokens[ti].row, tokens[ti].col)
 
+                    for i in range(len(tokens) - 1, ti, -1):
+                        if self.is_sym(tokens[i], ")"):
+                            break
+                        if self.is_sym(tokens[i], "->"):
+                            # Instead of adding code to handle functions of the
+                            # form:
+                            # def fun(...) -> ret
+                            # we simply transform the above to:
+                            # ret def fun(...)
+                            ti += len(tokens[i + 1:])
+                            tokens = tokens[i + 1:] + tokens[:i]
+                            break
+
                     node.is_pointer = False
                     name = tokens[ti + 1]
                     if len(tokens) > ti + 2 and self.is_sym(name, "*"):

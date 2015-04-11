@@ -22,7 +22,10 @@ def pointer_indirection(tokens, p):
                     i += 1
     return i
 
-def get_member(x : Parameter, name : str, p):
+"""
+Given a parameter, see if it has a pointer named name.
+"""
+def get_pointer_member(x : Parameter, name : str, p):
     d = x.declaration
     if d[0].kind == p.SYMBOL:
         if d[0].value == "*":
@@ -161,12 +164,12 @@ def find_matching_parenthesis(p, tokens, x):
         y += 1
     return None
 
-# In something like a.b.c.d find the a.
+# In something like a.b.c.d return [a, b, c, d]
 def find_dots(p : "Parser", token : "Node"):
     r = []
     def go_up(x):
         if x.kind == p.OPERATOR:
-            if x.value[0].kind == p.SYMBOL:
+            if len(x.value) >= 3 and x.value[0].kind == p.SYMBOL:
                 if x.value[0].value == ".":
                     r.insert(0, x.value[2])
                     go_up(x.value[1])

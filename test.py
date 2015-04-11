@@ -667,6 +667,16 @@ x->a->b = NULL;
 x->a->b->hu = NULL;
     """)
 
+def test_alternative_return():
+    return c_test("""
+def fun(int x) -> int:
+    pass
+""", """
+int fun(int x) {
+    ;
+}
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
