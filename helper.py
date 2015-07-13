@@ -26,7 +26,7 @@ def pointer_indirection(tokens, p):
 Given a parameter, see if it has a pointer named name.
 """
 def get_pointer_member(x : Parameter, name : str, p):
-    d = x.declaration
+    d = x.declaration.value
     if d[0].kind == p.SYMBOL:
         if d[0].value == "*":
             t = p.analyzer.types.get(d[1].value)
@@ -140,10 +140,13 @@ def parse_parameter_list(p, tokens):
             par.name = last.value
             par.declaration += ptokens
 
+        if par.name == "*":
+            par.declaration += [p.unnamed_token]
         params2.append(par)
         prev = par
 
     #print(": " + ", ".join([" ".join([y.value for y in x.declaration]) + " " + x.name for x in params2]))
+
     return params2    
 
 # tokens[x] is an open parenthesis. Return y so that tokens[y] is the matching

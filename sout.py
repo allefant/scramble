@@ -2,33 +2,35 @@ class SWriter:
     def __init__(self):
         pass
 
-    def statement(self, row):
+    def statement(self):
         p = self.p
-        line = ""
-        for tok in row:
-            if line: line += " "
+        while self.stack:
+            tok = self.stack.pop(0)
+            if self.line: self.line += " "
             if tok == None:
-                line += "POSTFIX"
+                self.line += "POSTFIX"
+            elif isinstance(tok, str):
+                self.line += tok
             elif tok.kind == p.OPERATOR:
-                line += "«"
-                line += self.statement(tok.value)
-                line += "»"
+                self.stack = ["«"] + list(tok.value) + ["»"] + self.stack
             elif tok.kind == p.STRING:
-                line += tok.value
+                self.line += tok.value
             elif tok.kind == p.SYMBOL:
-                line += tok.value
+                self.line += tok.value
             elif tok.kind == p.TOKEN:
-                line += tok.value
+                self.line += tok.value
             else:
-                line += "<unknown_%d>" % tok.kind
-        return line
+                self.line += "<unknown_%d>" % tok.kind
 
     def write_line(self, s, kind, colon):
         p = self.p
-        line = ""
-        line += self.statement(s.value)
+        self.line = ""
+        self.stack = []
+        for tok in s.value:
+            self.stack.append(tok)
+        self.statement()
         self.code += kind
-        self.code += self.indent * "    " + line + ("\n" if colon else "\n")
+        self.code += self.indent * "    " + self.line + ("\n" if colon else "\n")
 
     def write_block(self, b):
         if not b:
@@ -45,8 +47,7 @@ class SWriter:
                 self.write_line(s, "STAT ", True)
                 if s.name.value == "for":
                     if s.sub_kind in ["range", "in", "while"]:
-                        self.code += self.indent * "    " + "     " +\
-                            self.statement(s.part) + "\n"
+                        self.stack.append(s.part)
                 self.indent += 1
                 self.write_block(s.block)
                 self.indent -= 1

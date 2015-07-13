@@ -10,12 +10,14 @@ class CWriter:
     operator_hug_left = set((")", ",", ";", "++", "--", ".", "->", "[", "]", "}", "***"))
     operator_hug_right = set(("(", ".", "->", "--", "++", "[", "{", "***"))
 
+    def first_line(self):
+        if self.no_lines: return ""
+        x = self.note
+        x += "#line %d \"%s\"\n" % (1, self.p.filename)
+        return x
+
     def add_header_line(self, code):
         if not self.no_lines and not self.in_macro:
-            if self.out_hrow == 0:
-                self.header += "#line %d \"%s\"\n" % (self.in_row,
-                    self.p.filename)
-                self.out_hrow = self.in_row
             if self.out_hrow != self.in_row and not code.strip() in ("}", "};"):
                 self.header += "#line %d\n" % self.in_row
                 self.out_hrow = self.in_row
@@ -26,10 +28,6 @@ class CWriter:
 
     def add_code_line(self, code):
         if not self.no_lines and not self.in_macro:
-            if self.out_crow == 0:
-                self.code += "#line %d \"%s\"\n" % (self.in_row,
-                    self.p.filename)
-                self.out_crow = self.in_row
             if self.out_crow != self.in_row and (
                 code == None or code.strip() != "}"):
                 self.code += "#line %d\n" % self.in_row
@@ -55,6 +53,7 @@ class CWriter:
         word = tok.value
         if tok.kind == p.TOKEN:
             if word == "None": word = "NULL"
+            elif word == "unnamed": word = ""
             elif word == "True": word = "1"
             elif word == "False": word = "0"
             elif word == "min": word = "_scramble_min"; self.need_min = True
@@ -82,8 +81,8 @@ class CWriter:
                     word = new_word
 
         elif tok.kind == p.OPERATOR:
-            word = self.format_expression(tok)
-
+            self.stack = self.format_expression_as_list(tok) + self.stack
+            return None
         elif tok.kind == p.COMMENT:
             word = "/*" + tok.value + " */"
 
@@ -98,22 +97,26 @@ class CWriter:
 
         return word
 
-    def format_expression(self, token : parser.Node):
+    def format_expression_as_list(self, token : parser.Node):
+        """
+        Given an operator node, return a list of tokens/nodes/strings to
+        be passed to format_op.
+        """
         p = self.p
         a = analyzer.Analyzer
 
         if token.value[0].kind in [p.TOKEN, p.OPERATOR]:
-            r = self.format_op(token.value[0])
+            r = [token.value[0]]
             if token.value[1].kind == p.OPERATOR:
                 if is_sym(token.value[1].value[0], "("):
-                    r += ""
+                    r += []
                 else:
-                    r += " "
+                    r += [" "]
             else:
                 # handles e.g. x = L'♥'
                 if token.value[1].kind != p.STRING:
-                    r += " "
-            r += self.format_op(token.value[1])
+                    r += [" "]
+            r += [token.value[1]]
             return r
 
         op = token.value[0].value
@@ -139,7 +142,7 @@ class CWriter:
                     left = token.value[1]
                     right = token.value[2]
 
-        r = ""
+        r = []
         if left:
             if left.kind == p.OPERATOR:
                 if left.value[0].kind == p.SYMBOL:
@@ -147,15 +150,15 @@ class CWriter:
                 else:
                     leftop = " "
                 if leftop in "([{" or a.precedence(leftop, op):
-                    r += self.format_op(left)
+                    r += [left]
                 else:
-                    r += "(" + self.format_op(left) + ")"
+                    r += ["(", left, ")"]
             else:
-                r += self.format_op(left)
+                r += [left]
             if op not in self.operator_hug_left:
-                r += " "
+                r += [" "]
 
-        operator_value = self.format_op(token.value[0])
+        operator_value = token.value[0]
 
         # If x is a pointer, return the type declaration, else None
         def is_pointer(x):
@@ -166,7 +169,7 @@ class CWriter:
                     for parameter in b.variables:
                         if parameter.name == x.value:
                             if helper.pointer_indirection(
-                                    parameter.declaration, p) > 0:
+                                    parameter.declaration.value, p) > 0:
                                 return parameter
 
                 # see if it is a pointer from the parameter list
@@ -174,7 +177,7 @@ class CWriter:
                     for parameter in self.current_function[-1].parameters:
                         if parameter.name == x.value:
                             if helper.pointer_indirection(
-                                    parameter.declaration, p) > 0:
+                                    parameter.declaration.value, p) > 0:
                                 return parameter
             return None
         
@@ -189,7 +192,7 @@ class CWriter:
                     param = helper.get_pointer_member(param, c.value, p)
                     if not param:
                         break
-                    if helper.pointer_indirection(param.declaration, p) > 0:
+                    if helper.pointer_indirection(param.declaration.value, p) > 0:
                         pass
                     else:
                         break
@@ -197,7 +200,7 @@ class CWriter:
                     if param:
                         operator_value = "->"
 
-        r += operator_value
+        r += [operator_value]
 
         if right:
             if op not in self.operator_hug_right:
@@ -208,46 +211,49 @@ class CWriter:
                 else:
                     rightop = " "
                 if rightop not in "([{" and a.precedence(op, rightop):
-                    r += "(" + self.format_op(right) + ")"
+                    r += ["(", right, ")"]
                 else:
-                    r += self.format_op(right)
+                    r += [right]
             else:
-                r += self.format_op(right)
+                r += [right]
 
         if extra:
-            r += self.format_op(extra)
+            r += [extra]
         return r
-
-    def want_space(self, prev, tok):
-        p = self.p
-        if not prev: return False
-        
-        if prev.kind == p.SYMBOL:
-            return True
-
-        # handles e.g. Type variable
-        return True
 
     def format_line(self, tokens):
         """
         Weave a formatted string out of a list of tokens.
         """
+        self.stack = list(tokens)
+        self.line = ""
+        self.do_output()
+        return self.line
 
-        p = self.p
-        line = ""
+    def do_output(self):
         prev = None
-        for tok in tokens:
+        while self.stack:
+            tok = self.stack.pop(0)
+            if isinstance(tok, str):
+                self.line += tok
+                prev = None
+                continue
+
             if tok:
                 self.in_row, _ = parser.get_row_col(tok)
+            else:
+                prev = None
 
             word = self.format_op(tok)
+            if not word:
+                prev = None
+                continue
+            if prev:
+                if prev[-1].isalnum() and word[0].isalnum():
+                    self.line += " "
 
-            if self.want_space(prev, tok):
-                line += " "
-
-            line += word
-            prev = tok
-        return line
+            self.line += word
+            prev = word
 
     def handle_function(self, node):
         p = self.p
@@ -273,7 +279,7 @@ class CWriter:
             plines = []
             for parameter in node.parameters:
                 pline = ""
-                pline += self.format_line(parameter.declaration)
+                pline += self.format_line([parameter.declaration])
                 plines.append(pline)
             line += ", ".join(plines)                
         else:
@@ -544,6 +550,9 @@ class CWriter:
 
         self.add_iline(line)
         
+        if not statement.block:
+            p.error_token("Expected block for for.", token_for)
+
         self.indent += 1
         self.write_block(statement.block)
         self.indent -= 1
@@ -566,6 +575,7 @@ class CWriter:
         var_name = self.get_decl_var(token_decl)
         container_name = self.get_decl_var(token_container)
         loop_iter_name = "__iter%d__" % self.iter_id
+        self.iter_id += 1
         type_name = self.get_decl_type(token_container)        
         iter_name = type_name + "Iterator"
 
@@ -608,6 +618,8 @@ class CWriter:
         
         self.indent -= 1
         self.add_iline("}")
+
+        self.iter_id -= 1
 
     def handle_statement(self, statement):
         p = self.p
@@ -802,8 +814,8 @@ class CWriter:
         self.need_min = False
         self.need_max = False
         self.in_header = False
-        self.out_crow = 0
-        self.out_hrow = 0
+        self.out_crow = 0 # line-number of c-source
+        self.out_hrow = 0 # line number of header
         self.in_row = 1
         self.type_cdecl = ""
         self.type_hdecl = ""
@@ -818,8 +830,7 @@ class CWriter:
         guard = name.upper().replace("/", "_")
         guard = prefix + "_" + guard + "_"
 
-        code = ""
-        if not no_lines: code += self.note
+        code = self.first_line()
         code += "#include \"" + name + ".h\"\n"
         if self.need_min: code += "#define _scramble_min(x, y) ((y) < (x) ? (y) : (x))\n"
         if self.need_max: code += "#define _scramble_max(x, y) ((y) > (x) ? (y) : (x))\n"
@@ -827,8 +838,7 @@ class CWriter:
         code += self.code
         if not no_lines: code += self.note
 
-        header = ""
-        if not no_lines: header += self.note
+        header = self.first_line()
         header += "#ifndef " + guard + "\n"
         header += "#define " + guard + "\n"
         header += self.type_hdecl

@@ -83,6 +83,7 @@ class Parser:
         self.retain_comments = comments
         self.ignore_local_imports = False
         self.prefix_static = ""
+        self.unnamed_token = Token(Parser.TOKEN, "unnamed", 0, 0)
 
     def error_pos(self, message, l, o):
         message = "%s: %d/%d: %s" % (self.filename, l, o, message)
@@ -364,7 +365,11 @@ class Parser:
 
     def parse(self):
         self.get_tokens()
+        # at this point, self.lines is a list of lists of tokens
         self.get_blocks()
+        # now we have a tree of nodes
+
+        # handles the special include preprocessor
         self.get_includes()
 
         self.analyzer = analyzer.Analyzer(self)

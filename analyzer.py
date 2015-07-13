@@ -50,6 +50,7 @@ class Analyzer:
         "*" : 12,
         "/" : 12,
         "%" : 12,
+        "..." : 12,
 
         "(" : 13,
         ")" : 13,
@@ -370,7 +371,7 @@ class Analyzer:
                                     else:
                                         self.reduce_postfix(row, ti - 2)
                                 else:
-                                    p.error_token("Cannot deal with «%s»" % str(row), right_value)
+                                    p.error_token("Cannot deal with «%s»" % repr(row), right)
                             else:
                                 self.reduce(row, ti)
                             break
@@ -403,7 +404,12 @@ class Analyzer:
 
     def analyze_function(self, name, node, retlist, paramlist):
         node.name = name
-        node.parameters = helper.parse_parameter_list(self.parser, paramlist)
+        pl = helper.parse_parameter_list(self.parser, paramlist)
+        for par in pl:
+            param_node = parser.Node(self.parser.LINE, par.declaration)
+            self.transform_statement(param_node)
+            par.declaration = param_node.value[0]
+        node.parameters = pl
         node.ret = retlist
 
     def find_token_pos(self, tokens, name):
@@ -441,7 +447,7 @@ class Analyzer:
                         if op.value == "*":
                             if len(tokens) == 3:
                                 v = Variable(first.value[2].value,
-                                    first.value)
+                                    first)
                                 block_node.variables.append(v)
                         if op.value == "=":
                             check_variable_declaration(tokens[1])
@@ -593,9 +599,10 @@ class Analyzer:
                             # we simply transform the above to:
                             # ret def fun(...)
                             ti += len(tokens[i + 1:])
-                            tokens = tokens[i + 1:] + tokens[:i]
+                            tokens = tokens[:def_pos] + tokens[i + 1:] + tokens[def_pos:i]
                             break
 
+                    # function pointer instead of definition
                     node.is_pointer = False
                     name = tokens[ti + 1]
                     if len(tokens) > ti + 2 and self.is_sym(name, "*"):
@@ -606,8 +613,10 @@ class Analyzer:
                     node.parent_class = self.in_class
 
                     if len(tokens) == ti + 2:
+                        # def fun:
                         self.analyze_function(name, node, tokens[:ti], [])
                     else:
+                        # def fun(...):
                         if tokens[ti + 2].value != "(":
                             p.error_pos("Invalid function definition",
                                 tokens[ti + 2].row, tokens[ti + 2].col)

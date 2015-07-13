@@ -40,7 +40,7 @@ def main():
         try:
             p.parse()
         except MyError as e:
-            print(e)
+            print(e.value.encode("ascii", errors = "replace").decode("ascii"))
             exit(1)
 
         if not options.name:
