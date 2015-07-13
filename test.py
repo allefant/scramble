@@ -145,6 +145,25 @@ for (int x = 0; x < 10; x++) {
 }
 """)
 
+def test_for_nested_iter():
+    return c_test("""
+for MyElem *x in MyArray *arr:
+    for MyElem *y in MyArray *arr2:
+        handle(x, y)
+    """, """
+{
+    MyArrayIterator __iter0__ = MyArrayIterator_first(arr);
+    for (MyElem * x = MyArrayIterator_item(arr, &__iter0__); MyArrayIterator_next(arr, &__iter0__); x = MyArrayIterator_item(arr, &__iter0__)) {
+        {
+            MyArrayIterator __iter1__ = MyArrayIterator_first(arr2);
+            for (MyElem * y = MyArrayIterator_item(arr2, &__iter1__); MyArrayIterator_next(arr2, &__iter1__); y = MyArrayIterator_item(arr2, &__iter1__)) {
+                handle(x, y);
+            }
+        }
+    }
+}
+""")
+
 def test_void():
     return c_test("""
 def x(): pass
@@ -165,7 +184,7 @@ def test_param2():
     return c_test("""
 void (*)(int x) def x(void (*f)(int x, void *g), void *g): pass
 """, """
-void ( * ) ( int x ) x(void ( * f ) ( int x , void * g ), void * g) {
+void(*)(int x) x(void(* f)(int x, void * g), void * g) {
     ;
 }""")
 
@@ -173,7 +192,7 @@ def test_param3():
     return c_test("""
 def x(int **a, b, *c, **d): pass
 """, """
-void x(int * * a, int b, int * c, int * * d) {
+void x(int * (* a), int b, int * c, int * (* d)) {
     ;
 }""")
 
@@ -481,7 +500,7 @@ def test_callback():
     return c_test("""
 def x(void (*(*cb)())()): *cb()()
 """, """
-void x(void ( * ( * cb ) ( ) ) ( )) {
+void x(void(* (* cb)())()) {
     * cb()();
 }
 """)
@@ -493,7 +512,7 @@ static class A:
 """, """
 typedef struct A A;
 struct A {
-    int * (*x)(int, int);
+    int* (*x)(int, int);
 };
 """)
 
@@ -569,7 +588,7 @@ def test_pointer_params():
     return c_test("""
 int **def *x(int *, int **)
 """, """
-int * * (*x)(int *, int * *);
+int** (*x)(int * , int * (* ));
 """)  
 
 def test_typedef():
@@ -667,6 +686,33 @@ x->a->b = NULL;
 x->a->b->hu = NULL;
     """)
 
+def test_class_access2():
+    return c_test("""
+class A:
+    B *b
+class X:
+    A *a
+X *x
+x.a.b.c = None
+    """, """
+X * x;
+x->a->b->c = NULL;
+    """)
+
+def test_class_access3():
+    return c_test("""
+class A:
+    B *b
+class X:
+    A *a
+def fun(X *x):
+    x.a.b.c = None
+    """, """
+void fun(X * x) {
+    x->a->b->c = NULL;
+}
+    """)
+
 def test_alternative_return():
     return c_test("""
 def fun(int x) -> int:
@@ -677,10 +723,22 @@ int fun(int x) {
 }
 """)
 
+def test_inline():
+    return c_test("""
+inline def fun(int x) -> int:
+    pass
+""", """
+inline int fun(int x) {
+    ;
+}
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
     failed = 0
+    if test and not test.startswith("test_"):
+        test = "test_" + test
     for name, func in sorted(globals().items()):
         if name.startswith("test"):
             if test and test != name: continue
