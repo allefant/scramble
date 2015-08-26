@@ -105,6 +105,8 @@ class CWriter:
         p = self.p
         a = analyzer.Analyzer
 
+        r = []
+
         if token.value[0].kind in [p.TOKEN, p.OPERATOR]:
             r = [token.value[0]]
             if token.value[1].kind == p.OPERATOR:
@@ -124,11 +126,14 @@ class CWriter:
         left = None
         right = None
         extra = None
+
         if a.level[op] == 14: # postfix
             if token.value[1] is None:
                 left = token.value[2]
             else:
                 right = token.value[1]
+                if len(token.value) > 2:
+                    p.error_token("Operator '" + op + "' can't have two operands here.", token)
         else:
             if len(token.value) == 2:
                 right = token.value[1]
@@ -142,7 +147,6 @@ class CWriter:
                     left = token.value[1]
                     right = token.value[2]
 
-        r = []
         if left:
             if left.kind == p.OPERATOR:
                 if left.value[0].kind == p.SYMBOL:
@@ -335,7 +339,13 @@ class CWriter:
         if self.indent == 0 and not node.is_static:
             self.in_header = True
 
-        kind = self.format_line(node.value)
+        variable_name = ""
+        if node.parent_class:
+            kind = node.value[0].value
+            if len(node.value) > 1:
+                variable_name = " " + node.value[1].value
+        else:
+            kind = self.format_line(node.value)
 
         if node.block:
             
@@ -357,9 +367,9 @@ class CWriter:
             #    self.add_line(self.indent * "    " + line + ";")
 
             self.indent -= 1
-            self.add_line(self.indent * "    " + "};")
+            self.add_line(self.indent * "    " + "}" + variable_name + ";")
         else:
-            self.add_iline(kind + ";");
+            self.add_iline(kind + variable_name + ";");
 
         self.in_header = in_header
 

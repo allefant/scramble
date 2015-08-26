@@ -91,6 +91,23 @@ def h_test(prog, exp):
     print(code)
     return False
 
+def err_test(prog, err):
+    p = Parser("test", prog, comments = True)
+    try:
+        p.parse()
+        c = CWriter()
+        code, header = c.generate(p, "test", 1, "_TEST")
+        code = code.strip()
+    except parser.MyError as e:
+        if e.value == err:
+            return True
+        print("Expected:", err)
+        print("But got: ", e.value)
+    except Exception as e:
+        traceback.print_exc()
+
+    return False
+
 def test_sameline():
     return c_test("""
 int def a(int x): x *= 2; return x
@@ -534,6 +551,24 @@ union A {
 };
 """)
 
+def test_named_union():
+    return c_test("""
+static union A:
+    int x
+    union y:
+        int y
+        float z
+""", """
+typedef union A A;
+union A {
+    int x;
+    union {
+        int y;
+        float z;
+    } y;
+};
+""")
+
 def test_elif():
     return c_test("""
 if x: A
@@ -732,6 +767,11 @@ inline int fun(int x) {
     ;
 }
 """)
+
+def test_not_error():
+    return err_test("""
+x = a not = b
+""", "test: 2/6: Operator 'not' can't have two operands here.")
 
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None

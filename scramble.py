@@ -6,6 +6,7 @@ from cout import *
 from ctypesout import *
 import analyzer
 import join
+import terminal
 
 def main():
     op = argparse.ArgumentParser(add_help = False)
@@ -23,9 +24,14 @@ def main():
     o("-j", "--join", nargs = "+", help = "files to join")
     o("-o", "--output", help = "source code output file")
     o("-t", "--ctypes", help = "ctypes output file")
+    o("-T", "--terminal", action = "store_true")
     options = op.parse_args()
 
     p = None
+
+    if options.terminal:
+        terminal.run()
+        exit(0)
     
     if options.join:
         if options.output:
