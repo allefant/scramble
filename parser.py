@@ -1,5 +1,6 @@
 import os
 import analyzer
+import inspect
 
 class MyError(Exception):
     def __init__(self, value):
@@ -72,7 +73,7 @@ class Parser:
         return "UNKNOWN(" + str(x) + ")"
                 
 
-    def __init__(self, filename, text, comments = False):
+    def __init__(self, filename, text, comments = False, options = None):
         self.text = text.replace("\r", "")
         if len(text) == 0 or text[-1] != "\n": text += "\n"
         self.pos = 0
@@ -84,6 +85,12 @@ class Parser:
         self.ignore_local_imports = False
         self.prefix_static = ""
         self.unnamed_token = Token(Parser.TOKEN, "unnamed", 0, 0)
+        if not options:
+            class Options:
+                def __getattr__(o, k):
+                    return False
+            options = Options()
+        self.options = options
 
     def error_pos(self, message, l, o):
         message = "%s: %d/%d: %s" % (self.filename, l, o, message)
@@ -242,31 +249,54 @@ class Parser:
         """
         Does tokens, strings, comments, multi-line.
         """
-        
-        def parse(text):
-            self.insert += text
 
-        self.env = {"parse" : parse}
-        self.insert = ""
         self.balance = 0
         self.semicolon = False
         self.lines = [[]]
         
         if self.text.startswith("#!/usr/bin/env python"): return
-        
+
+        def parse(text):
+            self.insert += [(self.row, text)]
+
+        self.env = {"parse" : parse}
+
+        self.get_tokens_from_text()
+
+    def get_tokens_from_text(self):
+
         while self.pos < len(self.text):
             x = self.text[self.pos:self.pos + 11]
             if x == "***scramble":
                 end = self.text.find("\n***", self.pos)
                 if end >= 0:
-                    self.insert = ""
+                    self.insert = []
                     meta = self.text[self.pos + 11:end]
-                    eval(compile(meta, "meta", "exec"), self.env)
+                    try:
+                        eval(compile(meta, "meta", "exec"), self.env)
+                    except Exception as e:
+                        self.error("eval error: " + str(e))
                     remove_rows = self.text[self.pos:end + 4].count("\n")
-                    insert_rows = self.insert.count("\n")
-                    self.row += remove_rows - insert_rows
-                    self.text = self.text[:self.pos] + self.insert +\
-                        self.text[end + 4:]
+                    self.row += remove_rows
+
+                    #self.text = self.text[:self.pos] + self.insert +\
+                    #    self.text[end + 4:]
+                    self.text = self.text[:self.pos] + self.text[end + 4:]
+
+                    backup_text = self.text
+                    backup_pos = self.pos
+                    backup_rowpos = self.rowpos
+                    backup_row = self.row
+                    for row, ins in self.insert:
+                        self.text = ins
+                        self.pos = 0
+                        self.rowpos = 0
+                        self.row = row
+                        self.get_tokens_from_text()
+                    self.text = backup_text
+                    self.pos = backup_pos
+                    self.row = backup_row
+                    self.rowpos = backup_rowpos
 
             x = self.text[self.pos:self.pos + 7]
             if x == '***"""\n':
@@ -356,7 +386,7 @@ class Parser:
             else:
                 while 1:
                     del nested[-1]
-                    if col > nested[-1].col:
+                    if not nested or col > nested[-1].col:
                         self.error_pos("Unindent does not match" +
                             " any outer indentation level.",
                             line[0].row, line[0].col)
@@ -366,6 +396,11 @@ class Parser:
     def parse(self):
         self.get_tokens()
         # at this point, self.lines is a list of lists of tokens
+        if self.options.debug_tokens:
+            with open(self.options.debug_tokens, "w") as f:
+                for l in self.lines:
+                    f.write(str(l) + "\n")
+                
         self.get_blocks()
         # now we have a tree of nodes
 

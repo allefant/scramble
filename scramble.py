@@ -3,6 +3,7 @@ import argparse, os, sys
 from parser import *
 from sout import *
 from cout import *
+import dout
 from ctypesout import *
 import analyzer
 import join
@@ -25,6 +26,8 @@ def main():
     o("-o", "--output", help = "source code output file")
     o("-t", "--ctypes", help = "ctypes output file")
     o("-T", "--terminal", action = "store_true")
+    o("-d", "--dfile", help = "output api docs")
+    o("-DT", "--debug-tokens")
     options = op.parse_args()
 
     p = None
@@ -42,7 +45,8 @@ def main():
     elif options.input:
         text = open(options.input, "rb").read().decode("utf8")
 
-        p = Parser(options.input, text, comments = options.comments)
+        p = Parser(options.input, text, comments = options.comments,
+            options = options)
         try:
             p.parse()
         except MyError as e:
@@ -60,6 +64,12 @@ def main():
         s = SWriter()
         code = s.generate(p)
         f = open(options.sfile, "wb")
+        f.write(code.encode("utf8"))
+
+    if p and options.dfile:
+        d = dout.DWriter()
+        code = d.generate(p, options.name)
+        f = open(options.dfile, "wb")
         f.write(code.encode("utf8"))
 
     if p and (options.cfile or options.hfile):
