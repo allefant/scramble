@@ -80,7 +80,21 @@ class DWriter(cout.CWriter):
                     #self.pl("no description\n")
                     pass
                 self.pl()
+            if s.kind == p.TYPE and not s.is_static:
+                link = "http://sourceforge.net/p/lland/land/ci/master/tree/src/"
+                link += self.name[5:] + ".py#l" + str(s.value[0].row)
+                self.pl("## [" + str(s.name.value) + "](" +
+                    link + ")")
 
+                doc = False
+                if s.block:
+                    first = s.block.value[0]
+                    if first.kind == p.LINE:
+                        doc = self.doc(first)
+                if not doc:
+                    #self.pl("no description\n")
+                    pass
+                self.pl()
     def generate(self, p, name):
         self.p = p
         self.name = name

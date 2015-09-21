@@ -4,6 +4,7 @@ import traceback
 import parser
 import cout
 import sout
+import dout
 
 def restore():
     curses.nocbreak()
@@ -52,11 +53,19 @@ def prog():
             scode = s.generate(p)
             c = cout.CWriter()
             code, header = c.generate(p, "inline", 1, "_INLINE")
+            d = dout.DWriter()
+            docs = d.generate(p, "inline")
         except parser.MyError as e:
             header = e.value
             code = ""
 
         outwin.clear()
-        div = "\n" + "-" * (w - 4) + "\n\n"
-        outwin.addstr(0, 0, scode + div + header + div + code)
+        def div(x):
+            n = w - 4 - len(x)
+            n1 = n // 2
+            n2 = n - n1
+            return "\n" + "-" * n1 + x + "-" * n2 + "\n\n"
+        outwin.addstr(0, 0, scode + div("header") + header +
+            div("code") + code +
+            div("documentation") + docs)
         outwin.refresh()
