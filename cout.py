@@ -292,8 +292,13 @@ class CWriter:
         line += ")"
 
         # Write prototype into header.
-        if not node.is_static and not self.in_macro and not node.parent_class:
-            self.add_header_line(line + ";")
+        if not self.in_macro and not node.parent_class:
+            if node.is_static :
+                # always forward declare static functions, just in
+                # case - that way it's never required to do so
+                self.static_cdecl += line + ";\n"
+            else:
+                self.add_header_line(line + ";")
 
         if node.block:
             self.add_line(self.indent * "    " + line + " {")
@@ -828,6 +833,7 @@ class CWriter:
         self.out_hrow = 0 # line number of header
         self.in_row = 1
         self.type_cdecl = ""
+        self.static_cdecl = ""
         self.type_hdecl = ""
         self.in_macro = 0
         self.undef_at_end = []
@@ -845,6 +851,7 @@ class CWriter:
         if self.need_min: code += "#define _scramble_min(x, y) ((y) < (x) ? (y) : (x))\n"
         if self.need_max: code += "#define _scramble_max(x, y) ((y) > (x) ? (y) : (x))\n"
         code += self.type_cdecl
+        code += self.static_cdecl
         code += self.code
         if not no_lines: code += self.note
 

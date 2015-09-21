@@ -466,13 +466,22 @@ return (void *)self
 return (void *) self;
 """)
 
-def test_foward_decl():
+def test_forward_decl():
         return c_test("""
-static def x()
-static def y()
+static def x:
+    y()
+
+static def y:
+    x()
 """, """
 static void x(void);
 static void y(void);
+static void x(void) {
+    y();
+}
+static void y(void) {
+    x();
+}
 """)
 
 def test_empty_for_while():
