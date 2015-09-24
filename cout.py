@@ -322,7 +322,7 @@ class CWriter:
                 word = '"' + name + '.h"'
             line = "#include " + word
             if is_static:
-                self.add_code_line(line)
+                self.static_cdecl += line + "\n"
             else:
                 self.add_header_line(line)
 
