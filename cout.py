@@ -260,12 +260,16 @@ class CWriter:
             prev = word
 
     def handle_function(self, node):
+        no_decl = False
         p = self.p
 
         line = ""
 
         if node.is_static:
             line = "static "
+            if node.ret and node.ret[0].value == "not":
+                no_decl = True
+                del node.ret[0]
         
         if node.ret:
             line += self.format_line(node.ret)
@@ -296,7 +300,8 @@ class CWriter:
             if node.is_static :
                 # always forward declare static functions, just in
                 # case - that way it's never required to do so
-                self.static_cdecl += line + ";\n"
+                if not no_decl:
+                    self.static_cdecl += line + ";\n"
             else:
                 self.add_header_line(line + ";")
 

@@ -484,6 +484,23 @@ static void y(void) {
 }
 """)
 
+def test_no_forward_decl():
+        return c_test("""
+static not def x:
+    y()
+
+static def y:
+    x()
+""", """
+static void y(void);
+static void x(void) {
+    y();
+}
+static void y(void) {
+    x();
+}
+""")
+
 def test_empty_for_while():
     return c_test("""
 for while with:
