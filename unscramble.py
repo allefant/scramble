@@ -69,7 +69,7 @@ while 1:
     condition = re.compile(r"^!\s*").sub("not ", text[pos + 1:pos2 - 1])
     text = text[:pos] + condition + colon + text[pos2:]
 # remove {
-text = re.compile(r"\n\s*{\s*$", re.M).sub(":", text)
+text = re.compile(r"\s*{\s*$", re.M).sub(":", text)
 # remove }
 text = re.compile(r"^\s*}\s*$", re.M).sub("", text)
 # convert function declarations
@@ -90,5 +90,9 @@ text = re.compile(r'#include\s*<(.*)\.h>').sub(r"import global \1", text)
 text = re.compile(r"\bstruct\b").sub("class", text)
 # adjust for loops
 text = re.compile(r"\bfor\b(.*?);(.*?);(.*?):").sub(r"for\1 while\2 with\3:", text)
-    
+# fix && and || and !
+text = re.compile(r"\s*&&\s*").sub(" and ", text)
+text = re.compile(r"\s*\|\|\s*").sub(" or ", text)
+text = re.compile(r"\s*!\s*").sub(" not ", text)
+
 ouf.write(text)
