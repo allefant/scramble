@@ -20,6 +20,7 @@ class Node:
         self.comments = []
         self.is_static = False
         self.is_global = False
+        self.is_hidden = False
     def __repr__(self):
         return "Node(%s, %s)" % (Parser.kind_name(self.kind), repr(self.value))
 

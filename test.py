@@ -799,6 +799,24 @@ def test_not_error():
 x = a not = b
 """, "test: 2/6: Operator 'not' can't have two operands here.")
 
+def test_type_def():
+    return c_test("""
+type Game *game
+type class Game:
+    Game *b
+
+def fun:
+    print(game.x)
+    print(game.a.x)
+    print(game.b.x)
+""", """
+void fun(void) {
+    print(game->x);
+    print(game->a.x);
+    print(game->b->x);
+}
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0

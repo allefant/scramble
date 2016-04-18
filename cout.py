@@ -697,6 +697,10 @@ class CWriter:
         """
         Write out one statement in C language.
         """
+
+        if s.is_hidden:
+            return
+        
         p = self.p
         tokens = s.value[:]
 

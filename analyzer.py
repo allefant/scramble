@@ -467,6 +467,11 @@ class Analyzer:
                     t = tokens[0]
                     node.is_global = True
 
+                elif self.is_tok(t, "type"):
+                    del tokens[0]
+                    t = tokens[0]
+                    node.is_hidden = True
+
                 if self.is_sym(t, "***"):
                     node.kind = p.PREPROCESSOR
                     del node.value[0]
