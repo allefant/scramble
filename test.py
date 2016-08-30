@@ -817,6 +817,13 @@ void fun(void) {
 }
 """)
 
+def test_integer_div():
+    return c_test("""
+x = a // b
+""", """
+x = (int)(a / b);
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0

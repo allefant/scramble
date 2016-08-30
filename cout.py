@@ -65,6 +65,7 @@ class CWriter:
             elif word == "not": word = "!"
             elif word == "and": word = "&&"
             elif word == "or": word = "||"
+            elif word == "//": word = "/"
 
         elif tok.kind == p.STRING:
             if word.startswith("'''") or word.startswith('"""'):
@@ -223,6 +224,10 @@ class CWriter:
 
         if extra:
             r += [extra]
+
+        if op == "//":
+            r = ["(int)", "("] + r + [")"]
+            
         return r
 
     def format_line(self, tokens):
