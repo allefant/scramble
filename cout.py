@@ -2,6 +2,7 @@ import parser, analyzer, helper
 
 is_sym = analyzer.Analyzer.is_sym
 is_op = analyzer.Analyzer.is_op
+is_tok = analyzer.Analyzer.is_tok
 
 class CWriter:
 
@@ -123,7 +124,7 @@ class CWriter:
             return r
 
         op = token.value[0].value
-
+    
         left = None
         right = None
         extra = None

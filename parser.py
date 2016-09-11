@@ -21,6 +21,7 @@ class Node:
         self.is_static = False
         self.is_global = False
         self.is_hidden = False
+        
     def __repr__(self):
         return "Node(%s, %s)" % (Parser.kind_name(self.kind), repr(self.value))
 
@@ -32,6 +33,7 @@ class Token:
     def __init__(self, kind, value, row, col):
         self.kind, self.value, self.row, self.col = kind, value, row, col
         self.comments = []
+        
     def __repr__(self):
         return "Token(%d:%d, %s, %s)" % (self.row, self.col,
             Parser.kind_name(self.kind),

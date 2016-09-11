@@ -8,6 +8,19 @@ class Variable:
     def __repr__(self):
         return self.name
 
+    def replace_node(self, node, new_name):
+        copies = []
+        for token in node.value:
+            if token.value == self.name:
+                token = new_name
+            copies.append(token)
+        copy = parser.Node(node.kind, copies)
+        return copy
+
+    def replace(self, new_name):
+        copy = self.replace_node(self.declaration, new_name)
+        return copy
+
 class Analyzer:
     def __init__(self, parser):
         self.parser = parser
@@ -452,6 +465,18 @@ class Analyzer:
                                 block_node.variables.append(v)
                         if op.value == "=":
                             check_variable_declaration(tokens[1])
+
+            def check_auto_assignment(first):
+                if first.kind == self.parser.OPERATOR:
+                    tokens = first.value
+                    op = tokens[0]
+                    if Analyzer.is_sym(op, "="):
+                        if tokens[1].kind == self.parser.OPERATOR:
+                            if Analyzer.is_tok(tokens[1].value[0], "auto"):
+                                for v in block_node.variables:
+                                    if v.name == tokens[2].value:
+                                        first.value = (tokens[0], v.replace(tokens[1].value[1])) + tokens[2:]
+                                
             
             if node.kind == self.parser.LINE:
                 tokens = node.value
@@ -575,6 +600,7 @@ class Analyzer:
 
                     if node.value:
                         check_variable_declaration(node.value[0])
+                        check_auto_assignment(node.value[0])
                     if node.sub_kind:
                         self.transform_row(node.part)
 
@@ -663,6 +689,7 @@ class Analyzer:
                 self.transform_statement(node)
 
                 check_variable_declaration(node.value[0])
+                check_auto_assignment(node.value[0])
 
             if node.kind == self.parser.BLOCK:
                 self.analyze_block(node)

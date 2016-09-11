@@ -824,6 +824,15 @@ x = a // b
 x = (int)(a / b);
 """)
 
+def test_auto():
+    return c_test("""
+Blah *x
+auto y = x
+""", """
+Blah * x;
+Blah * y = x;
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
