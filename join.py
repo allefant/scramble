@@ -1,20 +1,44 @@
 from parser import *
+import helper
 
 dep = {}
-in_file = {}
+imports = {}
+provided_by_file = {}
+needed_by_file = {}
 
 def parse_block(p, b, fname):
     expect_class = False
+    imports[fname] = []
     for s in b.value:
         if s.kind == p.INCLUDE:
             parse_block(p, s.value.root)
+            continue
+        if s.kind == p.IMPORT:
+            is_global = False
+            name = ""
+            for x in s.value[1:]:
+                if x.kind == p.SYMBOL:
+                    if x.value in [".", "/"]:
+                        name += "/"
+                    elif x.value == ",":
+                        if is_global:
+                            imports[fname].append(name)
+                            name = ""
+                elif x.kind == p.TOKEN:
+                    if x.value == "global":
+                        is_global = True
+                        name = ""
+                    else:
+                        name += x.value
+            if is_global and name:
+                imports[fname].append(name)
             continue
         if s.kind == p.TYPE:
             if s.value[0].value in ["struct", "union"]:
                 name = s.value[1].value
             elif s.value[0].value == "typedef":
                 name = s.value[-1].value
-            in_file[name] = fname
+            provided_by_file[name] = fname
 
             if s.block:
                 for line in s.block.value:
@@ -22,7 +46,7 @@ def parse_block(p, b, fname):
                         p.error_token("expected field declaration", line)
 
                     def parse_field(f):
-                        if line.value[0].kind != p.OPERATOR:
+                        if f.kind != p.OPERATOR:
                             # probably a comment line
                             return
                         fields = f.value
@@ -42,12 +66,24 @@ def parse_block(p, b, fname):
                             # TODO: could for example be an array
                             return
 
-                        deps = dep.get(name, [])
-                        dep[name] = deps + [the_type]
+                        deps = dep.get(name, set())
+                        dep[name] = deps | set([the_type])
 
                     parse_field(line.value[0])
             else:
                 pass # probably a typedef
+        elif s.kind == p.FUNCTION:
+            if len(s.value) > 4:
+                params = helper.parse_parameter_list(p, s.value[3:-1])
+                for param in params:
+                    decl = param.declaration
+                    param_type = decl[0].value
+                    if len(decl) > 1:
+                        if decl[1].value == "*":
+                            # we ignore pointers
+                            continue
+                    deps = needed_by_file.get(name, set())
+                    needed_by_file[fname] = deps | set([param_type])
 
 def join(names, output):
 
@@ -62,18 +98,31 @@ def join(names, output):
 
         parse_block(p, p.root, name)
 
-    types = set(in_file.keys())
+    types = set(provided_by_file.keys())
 
     fdep = {}
     for t, needs in dep.items():
-        fdep[in_file[t]] = fdep.get(in_file[t], [])
+        fdep[provided_by_file[t]] = fdep.get(provided_by_file[t], set())
 
         for need in needs:
-            if need not in in_file:
+            if need not in provided_by_file:
                 continue
-            if in_file[need] == in_file[t]:
+            if provided_by_file[need] == provided_by_file[t]:
                 continue
-            fdep[in_file[t]].append(in_file[need])
+            fdep[provided_by_file[t]].add(provided_by_file[need])
+
+    for f, needs in needed_by_file.items():
+        for t in needs:
+            if t in provided_by_file and provided_by_file[t] != f:
+                fdep[f] = fdep.get(f, set())
+                fdep[f].add(provided_by_file[t])
+
+    all_imports = set()
+    for x in imports:
+        all_imports |= set(imports[x])
+
+    for imp in sorted(all_imports):
+        output.write(("import global " + imp + "\n").encode("utf8"))
 
     already = set()
     later = set(names)

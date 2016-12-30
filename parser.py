@@ -193,6 +193,8 @@ class Parser:
             self.pos += 1
         elif c in ")]}":
             self.balance -= 1
+            if self.balance < 0:
+                self.error("Closing parenthesis with no corresponding open parenthesis.")
             self.add_token(self.SYMBOL, c, self.row,
                 self.pos - self.rowpos)
             self.pos += 1
