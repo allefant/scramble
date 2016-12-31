@@ -21,7 +21,7 @@ For example, if you have a file main.py, then you could run:
 
 <tt>scramble.py -i src/main.py -c build/c/main.c -h build/h/main.h -n main</tt>
 
-And if your src/main.c would look like to the left, the resulting files would look like to the right:
+And if your src/main.py would look like to the left, the resulting files would look like to the right:
 
 <table>
 
@@ -298,7 +298,7 @@ In general, here is what scramble will do:
     <td>
 
     <pre>#include "test.h"
-    #include <stdio.h>
+    #include &lt;stdio.h&gt;
     </pre>
 
     </td>
@@ -365,7 +365,8 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>for MyElem *x in arr:
+    <pre>MyArray *arr
+        for MyElem *x in arr:
         handle(x)
     </pre>
 
