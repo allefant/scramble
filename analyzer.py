@@ -1,9 +1,23 @@
-import helper, parser
+import helper
+import parser
 
 class Variable:
     def __init__(self, name, declaration):
+        P = parser.Parser
         self.declaration = declaration
-        self.name = name
+        if type(name) is str:
+            self.name = name
+        elif Analyzer.is_tok(name):
+            self.name = name.value
+        elif name.kind == P.OPERATOR:
+            if Analyzer.is_sym(name.value[0], "*"):
+                name = name.value[1]
+            else:
+                while name.kind == P.OPERATOR:
+                    name = name.value[0]
+            self.name = name.value
+        else:
+            self.name = name.value
 
     def __repr__(self):
         return self.name
@@ -21,6 +35,29 @@ class Variable:
         copy = self.replace_node(self.declaration, new_name)
         return copy
 
+    def get_type(self):
+        P = parser.Parser
+        n = self.declaration
+        if Analyzer.is_sym(n.value[0], "*"):
+            star = "*"
+            name = n.value[1]
+
+            if len(n.value) > 2:
+                op3 = n.value[2]
+                if op3.kind == P.OPERATOR:
+                    # TODO: We only detect ** pointers but not *** and so on
+                    if Analyzer.is_sym(op3.value[0], "*"):
+                        star += "*"
+            
+            if Analyzer.is_tok(name):
+                return name.value + star
+            elif name.kind == P.OPERATOR:
+                if name.value[0].kind == P.TOKEN:
+                    # something like: "char const *x" -> "char const*"
+                    r = " ".join([v.value for v in name.value])
+                    return r + star
+        return ""
+
 class Analyzer:
     def __init__(self, parser):
         self.parser = parser
@@ -29,7 +66,7 @@ class Analyzer:
         self.functions = {}
         self.variables = {}
         self.in_class = None
-
+ 
     level = {
         "," : 0,
         "=" : 1,
@@ -453,30 +490,18 @@ class Analyzer:
             # detect if the statement declares a variable
             # TODO: As long as we don't have knowledge of which tokens
             # are types, this is only a crude heuristic.
-            def check_variable_declaration(first):
+            def check_variable_declaration(first, is_global):
                 if first.kind == self.parser.OPERATOR:
                     tokens = first.value
                     op = tokens[0]
                     if op.kind == self.parser.SYMBOL:
                         if op.value == "*":
                             if len(tokens) == 3:
-                                v = Variable(first.value[2].value,
-                                    first)
+                                first.is_global = is_global
+                                v = Variable(first.value[2], first)
                                 block_node.variables.append(v)
                         if op.value == "=":
-                            check_variable_declaration(tokens[1])
-
-            def check_auto_assignment(first):
-                if first.kind == self.parser.OPERATOR:
-                    tokens = first.value
-                    op = tokens[0]
-                    if Analyzer.is_sym(op, "="):
-                        if tokens[1].kind == self.parser.OPERATOR:
-                            if Analyzer.is_tok(tokens[1].value[0], "auto"):
-                                for v in block_node.variables:
-                                    if v.name == tokens[2].value:
-                                        first.value = (tokens[0], v.replace(tokens[1].value[1])) + tokens[2:]
-                                
+                            check_variable_declaration(tokens[1], is_global)
             
             if node.kind == self.parser.LINE:
                 tokens = node.value
@@ -599,8 +624,7 @@ class Analyzer:
                     self.transform_statement(node)
 
                     if node.value:
-                        check_variable_declaration(node.value[0])
-                        check_auto_assignment(node.value[0])
+                        check_variable_declaration(node.value[0], False)
                     if node.sub_kind:
                         self.transform_row(node.part)
 
@@ -688,8 +712,7 @@ class Analyzer:
 
                 self.transform_statement(node)
 
-                check_variable_declaration(node.value[0])
-                check_auto_assignment(node.value[0])
+                check_variable_declaration(node.value[0], node.is_global)
 
             if node.kind == self.parser.BLOCK:
                 self.analyze_block(node)

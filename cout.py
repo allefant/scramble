@@ -514,9 +514,13 @@ class CWriter:
             return decl[0]
         return None
 
-    def get_decl_type(self, decl):
+    def get_decl_type_name(self, decl):
         op = decl[0] # assume it's just a * operator
-        type_token = op.value[1] # left operator
+        if op.kind == self.p.TOKEN:
+            v = self.find_variable(op.value)
+            type_token = v.declaration.value[1]
+        else:
+            type_token = op.value[1] # left operator
         return type_token.value
 
     # given something like "(a, b + 1, c)" return "a b+1 c"
@@ -584,6 +588,7 @@ class CWriter:
         self.indent -= 1
         self.add_iline("}")
 
+    # handle for in loop
     def write_for_in(self, statement):
         p = self.p
         # example
@@ -602,7 +607,8 @@ class CWriter:
         container_name = self.get_decl_var(token_container)
         loop_iter_name = "__iter%d__" % self.iter_id
         self.iter_id += 1
-        type_name = self.get_decl_type(token_container)        
+       
+        type_name = self.get_decl_type_name(token_container)        
         iter_name = type_name + "Iterator"
 
         container_name = self.format_line([container_name])
@@ -689,6 +695,7 @@ class CWriter:
         else:
             line = name
             tokens = statement.value
+            
             if tokens:
                 line += " (" + self.format_line(tokens) + ")"
 
@@ -698,6 +705,28 @@ class CWriter:
             self.write_block(statement.block)
             self.indent -= 1
         self.add_iline("}")
+
+    def find_variable(self, name):
+        # check if the type is declared in the current or a parent block
+        for block in self.current_block:
+            for v in block.variables:
+                if v.name == name:
+                    return v
+        # check if the type comes from a parameter
+        if self.current_function:
+            for parameter in self.current_function[-1].parameters:
+                if parameter.name == name:
+                    return parameter.as_variable()
+
+    def check_auto_assignment(self, first):
+        if first.kind == self.p.OPERATOR:
+            tokens = first.value
+            op = tokens[0]
+            if analyzer.Analyzer.is_sym(op, "="):
+                if tokens[1].kind == self.p.OPERATOR:
+                    if analyzer.Analyzer.is_tok(tokens[1].value[0], "auto"):
+                        v = self.find_variable(tokens[2].value)
+                        first.value = (tokens[0], v.replace(tokens[1].value[1])) + tokens[2:]
 
     def write_line(self, s, block):
         """
@@ -727,6 +756,8 @@ class CWriter:
                     if not first: self.code += "     */\n"
                     self.out_crow += 1
                 return
+
+            self.check_auto_assignment(tokens[0])
 
             line = self.format_line(tokens)
             if s.is_static:

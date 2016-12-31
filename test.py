@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from parser import *
-from sout import *
+from sout import SWriter
 from cout import *
+from eout import EWriter
 import sys, traceback
 
 G = "\x1b[1;32m"
@@ -14,6 +15,18 @@ def s_test(prog, exp):
     p.parse()
     s = SWriter()
     code = s.generate(p)
+    code = code.strip()
+    if code == exp:
+        return True
+    print("<" + code + ">")
+    return False
+
+def e_test(prog, exp):
+    exp = exp.strip()
+    p = Parser("test", prog)
+    p.parse()
+    e = EWriter()
+    code = e.generate(p)
     code = code.strip()
     if code == exp:
         return True
@@ -831,6 +844,86 @@ auto y = x
 """, """
 Blah * x;
 Blah * y = x;
+""")
+
+def test_auto_global():
+    return c_test("""
+Blah *x
+def fun:
+    auto y = x
+""", """
+Blah * x;
+void fun(void) {
+    Blah * y = x;
+}
+""")
+
+def test_auto_param():
+    return c_test("""
+def fun(Blah *x):
+    auto y = x
+""", """
+void fun(Blah * x) {
+    Blah * y = x;
+}
+""")
+
+def test_array_type():
+    return e_test("""
+class X:
+    Blah *a
+    Blah *b[]
+    Blah *c[10]
+    Blah *d[10][10]
+""", """
+X
+    a : Blah*
+    b : Blah*
+    c : Blah*
+    d : Blah*
+""")
+
+def test_const_type():
+    return e_test("""
+class C:
+    char *a
+    char const *b
+    const char *c
+    char const **d
+    char const *e[]
+""", """
+C
+    a : char*
+    b : char const*
+    c : const char*
+    d : char const**
+    e : char const*
+""")
+
+def test_auto_loop():
+    return c_test("""
+def fun(LandArray *x):
+    for X *a in x:
+        print(a)
+    LandList *y
+    for X *a in y:
+        print(a)
+""", """
+void fun(LandArray * x) {
+    {
+        LandArrayIterator __iter0__ = LandArrayIterator_first(x);
+        for (X * a = LandArrayIterator_item(x, &__iter0__); LandArrayIterator_next(x, &__iter0__); a = LandArrayIterator_item(x, &__iter0__)) {
+            print(a);
+        }
+    }
+    LandList * y;
+    {
+        LandListIterator __iter0__ = LandListIterator_first(y);
+        for (X * a = LandListIterator_item(y, &__iter0__); LandListIterator_next(y, &__iter0__); a = LandListIterator_item(y, &__iter0__)) {
+            print(a);
+        }
+    }
+}
 """)
 
 def main():

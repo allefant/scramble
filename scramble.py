@@ -3,6 +3,7 @@ import argparse, os, sys
 from parser import *
 from sout import *
 from cout import *
+from eout import EWriter
 import dout
 from ctypesout import *
 import analyzer
@@ -22,6 +23,7 @@ def main():
     o("-N", "--no-lines", action = "store_true",
         help = "don't generate #line directives")
     o("-s", "--sfile", help = "intermediate code output file")
+    o("-e", "--efile", help = "extra output file")
     o("-j", "--join", nargs = "+", help = "files to join")
     o("-o", "--output", help = "source code output file")
     o("-t", "--ctypes", help = "ctypes output file")
@@ -64,6 +66,12 @@ def main():
         s = SWriter()
         code = s.generate(p)
         f = open(options.sfile, "wb")
+        f.write(code.encode("utf8"))
+
+    if p and options.efile:
+        e = EWriter()
+        code = e.generate(p)
+        f = open(options.efile, "wb")
         f.write(code.encode("utf8"))
 
     if p and options.dfile:

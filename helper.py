@@ -1,6 +1,11 @@
+import analyzer
+
 class Parameter:
     name = ""
     declaration = []
+
+    def as_variable(self):
+        return analyzer.Variable(self.name, self.declaration)
 
     def __repr__(self):
         return self.name
