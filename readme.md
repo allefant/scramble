@@ -365,7 +365,7 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>MyArray *arr
+    <pre>    MyArray *arr
         for MyElem *x in arr:
         handle(x)
     </pre>
