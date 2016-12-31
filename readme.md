@@ -19,9 +19,9 @@ Scramble is used like this:
 
 For example, if you have a file main.py, then you could run:
 
-<tt>scramble.py -i src/main.py -c build/c/main.c -h build/h/main.h -n **main**</tt>
+<tt>scramble.py -i src/main.py -c build/c/main.c -h build/h/main.h -n main</tt>
 
-And if your src/main.c would look like to the left, the resulting files would look like to the right (The red color indicates what the -n options does):
+And if your src/main.c would look like to the left, the resulting files would look like to the right:
 
 <table>
 
@@ -33,15 +33,15 @@ And if your src/main.c would look like to the left, the resulting files would lo
 
 src/main.py
 
-<pre>**import** stdio, string, math
+<pre>import stdio, string, math
 
-int **def** **main**(int argc, char **argv):
-    **if** argc == 2:
+int def main(int argc, char **argv):
+    if argc == 2:
         printf("%f\n", sin(strtod(argv[1]))
-        **return** 0
-    **else**:
+        return 0
+    else:
         fprintf(stderr, "Need exactly one argument!\n")
-        **return** 1
+        return 1
 </pre>
 
 </td>
@@ -50,7 +50,7 @@ int **def** **main**(int argc, char **argv):
 
 build/c/main.c
 
-<pre>#include "**main**.h"
+<pre>#include "main.h"
 
 int main(int argc, char **argv)
 {
@@ -67,7 +67,7 @@ int main(int argc, char **argv)
 
 build/h/main.h
 
-<pre>#ifndef _**MAIN**_
+<pre>#ifndef _MAIN_
 
 #include "stdio.h"
 #include "string.h"
@@ -85,42 +85,6 @@ extern int main(int argc, char **argv);
 </tbody>
 
 </table>
-
-## Syntax
-
-<pre>usage: scramble [-?] [-i INPUT] [-c CFILE] [-C] [-h HFILE] [-n NAME]
-                [-p PREFIX] [-N] [-s SFILE] [--noc99] [-j JOIN [JOIN ...]]
-                [-o OUTPUT] [-t CTYPES]
-
-optional arguments:
-  -?, --help
-  -i INPUT, --input INPUT
-                        input file
-  -c CFILE, --cfile CFILE
-                        c output file
-  -C, --comments        keep comments
-  -h HFILE, --hfile HFILE
-                        h output file
-  -n NAME, --name NAME  module name
-  -p PREFIX, --prefix PREFIX
-                        header guard prefix
-  -N, --no-lines        don't generate #line directives
-  -s SFILE, --sfile SFILE
-                        intermediate code output file
-  --noc99               do not use C99
-  -j JOIN [JOIN ...], --join JOIN [JOIN ...]
-                        files to join
-  -o OUTPUT, --output OUTPUT
-                        source code output file
-  -t CTYPES, --ctypes CTYPES
-                        ctypes output file
-</pre>
-
-*   INPUT is the input file, usually it will have a .py extension.
-*   CFILE is the name of the generated .c file.
-*   HFILE is the name of the generated .h file.
-*   NAME is used for the header guard prefix and as name of the header file to include from the .c file. Usually it should be the base name of HFILE (without path or .h).
-*   PREFIX is an extra prefix prepended to the header guards.
 
 ## Keywords
 
@@ -148,7 +112,7 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>**if** x == 2:
+    <pre>if x == 2:
         x = 3
         y = 3
     </pre>
@@ -185,14 +149,14 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>**def** **f1**():
-        **pass**
+    <pre>def f1():
+        pass
 
-    **def** **f2**(int x, y, z):
-        **pass**
+    def f2(int x, y, z):
+        pass
 
-    int **def** **f3**():
-        **pass**
+    int def f3():
+        pass
     </pre>
 
     </td>
@@ -231,23 +195,23 @@ In general, here is what scramble will do:
 
     test.py
 
-    <pre>**class** **A**:
+    <pre>class A:
         int x
 
-    **class** **B**:
+    class B:
         A *a
 
-    static **class** **C**:
+    static class C:
         B *b
 
-    static A ***def** **a_new**():
-        A ***self** = calloc(1, sizeof ***self**)
-        **return** **self**
+    static A *def a_new():
+        A *self = calloc(1, sizeof *self)
+        return self
 
-    B ***def** **b_new**():
-        B ***self** = calloc(1, sizeof ***self**)
-        **self**->a = a_new()
-        **return** **self**
+    B *def b_new():
+        B *self = calloc(1, sizeof *self)
+        self->a = a_new()
+        return self
     </pre>
 
     </td>
@@ -355,10 +319,10 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>*****scramble**
-    **for** x **in** ["A", "B", "C"]:
+    <pre>***scramble
+    for x in ["A", "B", "C"]:
         parse("char def function" + x + "(): return '" + x + "'")
-    *******
+    ***
     </pre>
 
     </td>
@@ -399,7 +363,7 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>for MyElem *x in **MyArray** *arr:
+    <pre>for MyElem *x in MyArray *arr:
         handle(x)
     </pre>
 
@@ -409,10 +373,10 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>**MyArray**Iterator __iter__ = **MyArray**Iterator_first(arr);
-    for (MyElem *x = **MyArray**Iterator_item(arr, &__iter__);
-            **MyArray**Iterator_next(arr, &__iter__);
-            x = **MyArray**Iterator_item(arr, &__iter__)) {
+    <pre>MyArrayIterator __iter__ = MyArrayIterator_first(arr);
+    for (MyElem *x = MyArrayIterator_item(arr, &__iter__);
+            MyArrayIterator_next(arr, &__iter__);
+            x = MyArrayIterator_item(arr, &__iter__)) {
         handle(x);
     }
     </pre>
