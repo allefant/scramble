@@ -400,5 +400,3 @@ In general, here is what scramble will do:
 *   As the hash sign starts a comment, *** can be used to insert C preprocessor commands.
 *   Instead of #define, **macro** and **static macro** can be used to place a #define either into the .h or .c file.
 *   Since the : is used up by Python syntax, labels are marked with the **label** keyword instead of :. Bitfields use the keyword **with**. The colon in the C tertiary operator works for now until I implemnt the if-else construct.
-
-[![Valid XHTML 1.0 Strict](http://www.w3.org/Icons/valid-xhtml10)](http://validator.w3.org/check?uri=referer)
