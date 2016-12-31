@@ -353,7 +353,8 @@ In general, here is what scramble will do:
     </table>
 
 *   Triple quoted strings, useful for multi-line string constants.
-*   Support for *auto* declarations (type is inferred)
+*   Support for **auto** declarations (type is inferred)
+*   In many cases you can use **.** instead of **->** (if the type inference sees a pointer left of the . a -> is output instead)
 *   Extended for-loop syntax, for example:
 
     <table>
@@ -395,7 +396,7 @@ In general, here is what scramble will do:
 ## More stuff (might change?)
 
 *   **None**, **min**, **max**, **True**, **False** keywords. For now min and max are macros for the ternary operator - with the usual problem of evaluating the argument twice.
-*   As the hash sign starts a comment, ******* can be used to insert C preprocessor commands.
+*   As the hash sign starts a comment, *** can be used to insert C preprocessor commands.
 *   Instead of #define, **macro** and **static macro** can be used to place a #define either into the .h or .c file.
 *   Since the : is used up by Python syntax, labels are marked with the **label** keyword instead of :. Bitfields use the keyword **with**. The colon in the C tertiary operator works for now until I implemnt the if-else construct.
 
