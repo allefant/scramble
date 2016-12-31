@@ -8,7 +8,7 @@ Similar (and better) projects:
 
 *   [pyrex](http://www.cosc.canterbury.ac.nz/~greg/python/Pyrex/)
 *   [shedskin](http://shed-skin.blogspot.com)
-*   [cinpy](http://www.cs.tut.fi/~ask/cinpy/)
+*   [pypy](http://pypy.org/)
 *   [pyplus](http://www.imitationpickles.org/pyplus/)
 
 ## Example
@@ -35,7 +35,7 @@ src/main.py
 
 <pre>import stdio, string, math
 
-int def main(int argc, char **argv):
+def main(int argc, char **argv) -> int:
     if argc == 2:
         printf("%f\n", sin(strtod(argv[1]))
         return 0
@@ -155,7 +155,7 @@ In general, here is what scramble will do:
     def f2(int x, y, z):
         pass
 
-    int def f3():
+    def f3 -> int:
         pass
     </pre>
 
@@ -208,7 +208,7 @@ In general, here is what scramble will do:
         A *self = calloc(1, sizeof *self)
         return self
 
-    B *def b_new():
+    def b_new() -> B*:
         B *self = calloc(1, sizeof *self)
         self->a = a_new()
         return self
@@ -288,7 +288,7 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>**import** test, **global** stdio
+    <pre>import test, global stdio
     </pre>
 
     </td>
@@ -353,6 +353,7 @@ In general, here is what scramble will do:
     </table>
 
 *   Triple quoted strings, useful for multi-line string constants.
+*   Support for *auto* declarations (type is inferred)
 *   Extended for-loop syntax, for example:
 
     <table>
@@ -363,7 +364,7 @@ In general, here is what scramble will do:
 
     <td>
 
-    <pre>for MyElem *x in MyArray *arr:
+    <pre>for MyElem *x in arr:
         handle(x)
     </pre>
 
