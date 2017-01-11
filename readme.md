@@ -204,7 +204,7 @@ In general, here is what scramble will do:
     static class C:
         B *b
 
-    static A *def a_new():
+    static def a_new() -> A*:
         A *self = calloc(1, sizeof *self)
         return self
 
@@ -392,7 +392,7 @@ In general, here is what scramble will do:
 
     </table>
 
-*   **Docstrings** can be used to automatically generate documentation. Strings at the beginning of a function are ignored, but can optionally be outputted to a separate file, associated with the function they are defined in. This can then be used to translate into different documentation formats.
+*   **Docstrings** can be used to automatically generate documentation. Strings at the beginning of a function are ignored, but can optionally be output to a separate file, associated with the function they are defined in. This can then be used to translate into different documentation formats.
 
 ## More stuff (might change?)
 
