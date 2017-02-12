@@ -333,7 +333,7 @@ class CWriter:
                 word = '"' + name + '.h"'
             line = "#include " + word
             if is_static:
-                self.static_cdecl += line + "\n"
+                self.static_import += line + "\n"
             else:
                 self.add_header_line(line)
 
@@ -890,6 +890,7 @@ class CWriter:
         self.in_row = 1
         self.type_cdecl = ""
         self.static_cdecl = ""
+        self.static_import = ""
         self.type_hdecl = ""
         self.in_macro = 0
         self.undef_at_end = []
@@ -907,6 +908,7 @@ class CWriter:
         if self.need_min: code += "#define _scramble_min(x, y) ((y) < (x) ? (y) : (x))\n"
         if self.need_max: code += "#define _scramble_max(x, y) ((y) > (x) ? (y) : (x))\n"
         code += self.type_cdecl
+        code += self.static_import
         if self.before_first_function_code:
             code += self.before_first_function_code
         code += self.static_cdecl
