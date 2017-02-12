@@ -3,8 +3,9 @@ class EWriter:
         a = self.p.analyzer
         for t in a.types:
             self.code += str(t) + "\n"
-            for v in a.types[t].block.variables:
-                self.code += "    " + str(v.name) + " : " + v.get_type() + "\n"
+            if a.types[t].block:
+                for v in a.types[t].block.variables:
+                    self.code += "    " + str(v.name) + " : " + v.get_type() + "\n"
 
     def write_variables(self):
         for v in self.p.root.variables:

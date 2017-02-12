@@ -518,7 +518,10 @@ class CWriter:
         op = decl[0] # assume it's just a * operator
         if op.kind == self.p.TOKEN:
             v = self.find_variable(op.value)
-            type_token = v.declaration.value[1]
+            if v:
+                type_token = v.declaration.value[1]
+            else:
+                return ""
         else:
             type_token = op.value[1] # left operator
         return type_token.value
@@ -608,8 +611,11 @@ class CWriter:
         loop_iter_name = "__iter%d__" % self.iter_id
         self.iter_id += 1
        
-        type_name = self.get_decl_type_name(token_container)        
-        iter_name = type_name + "Iterator"
+        type_name = self.get_decl_type_name(token_container)
+        if type(type_name) != str:
+            p.error_token("Need iterator type", token_for)
+        else:
+            iter_name = type_name + "Iterator"
 
         container_name = self.format_line([container_name])
 

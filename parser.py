@@ -310,7 +310,7 @@ class Parser:
                     remove_rows = self.text[self.pos:end + 7].count("\n")
                     self.row += remove_rows
                     self.text = self.text[:self.pos] + self.text[end + 7:]
-                    
+
             self.get_token()
             
     def get_includes(self):
