@@ -926,6 +926,44 @@ void fun(LandArray * x) {
 }
 """)
 
+def test_outer_preprocessor():
+    return c_test("""
+global ***if X > BLAH
+***if X > BLAH
+def fun:
+    bah()
+static def bah:
+    pass
+***endif
+global ***endif
+""",
+"""
+#if X > BLAH
+static void bah(void);
+void fun(void) {
+    bah();
+}
+static void bah(void) {
+    ;
+}
+#endif
+""")
+
+def test_outer_preprocessor_h():
+    return h_test("""
+global ***if X > BLAH
+def fun:
+    bah()
+static def bah:
+    pass
+global ***endif
+""",
+"""
+#if X > BLAH
+void fun(void);
+#endif
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0

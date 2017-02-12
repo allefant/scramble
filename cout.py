@@ -815,6 +815,9 @@ class CWriter:
             elif s.kind == p.TYPE:
                 self.handle_class(s)
             elif s.kind == p.FUNCTION:
+                if self.before_first_function_code is None:
+                    self.before_first_function_code = self.code
+                    self.code = ""
                 self.current_function.append(s)
                 self.handle_function(s)
                 self.current_function.pop()
@@ -867,6 +870,7 @@ class CWriter:
     def generate(self, p, name, no_lines, prefix):
         self.p = p
         self.indent = 0
+        self.before_first_function_code = None
         self.code = ""
         self.header = ""
         self.name = name
@@ -897,6 +901,8 @@ class CWriter:
         if self.need_min: code += "#define _scramble_min(x, y) ((y) < (x) ? (y) : (x))\n"
         if self.need_max: code += "#define _scramble_max(x, y) ((y) > (x) ? (y) : (x))\n"
         code += self.type_cdecl
+        if self.before_first_function_code:
+            code += self.before_first_function_code
         code += self.static_cdecl
         code += self.code
         if not no_lines: code += self.note
