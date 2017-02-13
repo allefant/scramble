@@ -1,7 +1,7 @@
 from parser import *
 import helper
 
-dep = {}
+class_dep = {}
 imports = {}
 provided_by_file = {}
 needed_by_file = {}
@@ -66,8 +66,8 @@ def parse_block(p, b, fname):
                             # TODO: could for example be an array
                             return
 
-                        deps = dep.get(name, set())
-                        dep[name] = deps | set([the_type])
+                        deps = class_dep.get(name, set())
+                        class_dep[name] = deps | set([the_type])
 
                     parse_field(line.value[0])
             else:
@@ -101,7 +101,7 @@ def join(names, output):
     types = set(provided_by_file.keys())
 
     fdep = {}
-    for t, needs in dep.items():
+    for t, needs in class_dep.items():
         fdep[provided_by_file[t]] = fdep.get(provided_by_file[t], set())
 
         for need in needs:

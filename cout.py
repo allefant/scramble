@@ -385,7 +385,11 @@ class CWriter:
             self.indent -= 1
             self.add_line(self.indent * "    " + "}" + variable_name + ";")
         else:
-            self.add_iline(kind + variable_name + ";");
+            decl = kind + variable_name + ";\n"
+            if self.in_header:
+                self.type_hdecl += decl
+            else:
+                self.type_cdecl += decl
 
         self.in_header = in_header
 

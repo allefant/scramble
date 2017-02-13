@@ -964,6 +964,19 @@ void fun(void);
 #endif
 """)
 
+def test_typedef():
+    return c_test("""
+void fun(Int i):
+    pass
+static typedef int Int
+""",
+"""
+typedef int Int;
+void fun(Int i) {
+    ;
+}
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
