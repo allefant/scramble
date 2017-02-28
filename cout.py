@@ -185,6 +185,10 @@ class CWriter:
                             if helper.pointer_indirection(
                                     parameter.declaration.value, p) > 0:
                                 return parameter
+
+                # see if it is a global variable
+                if x.value in p.external_variables:
+                    return p.external_variables[x.value]
             return None
         
         # special recognition of . as ->

@@ -88,6 +88,8 @@ class Parser:
         self.ignore_local_imports = False
         self.prefix_static = ""
         self.unnamed_token = Token(Parser.TOKEN, "unnamed", 0, 0)
+        self.external_types = {}
+        self.external_variables = {}
         if not options:
             class Options:
                 def __getattr__(o, k):
@@ -414,6 +416,12 @@ class Parser:
 
         self.analyzer = analyzer.Analyzer(self)
         self.analyzer.analyze()
+
+    def add_external_type(self, name, node : Node):
+        self.external_types[name] = node
+
+    def add_external_variable(self, variable : analyzer.Variable):
+        self.external_variables[variable.name] = variable
 
 def get_row_col(node):
 

@@ -9,11 +9,13 @@ from ctypesout import *
 import analyzer
 import join
 import terminal
+import module
 
 def main():
     op = argparse.ArgumentParser(add_help = False)
     o = op.add_argument
     o("-?", "--help", action = "help"),
+    o("-m", "--module", action = "append", help = "module folder")
     o("-i", "--input", help = "input file")
     o("-c", "--cfile", help = "c output file")
     o("-C", "--comments", help = "keep comments", action = "store_true")
@@ -37,7 +39,7 @@ def main():
     if options.terminal:
         terminal.run()
         exit(0)
-    
+
     if options.join:
         if options.output:
             f = open(options.output, "wb")
@@ -49,6 +51,10 @@ def main():
 
         p = Parser(options.input, text, comments = options.comments,
             options = options)
+
+        if options.module:
+            module.parse_all(p, options.module)
+        
         try:
             p.parse()
         except MyError as e:
