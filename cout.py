@@ -339,7 +339,10 @@ class CWriter:
             if is_static:
                 self.static_import += line + "\n"
             else:
-                self.add_header_line(line)
+                if is_global:
+                    self.global_import_global += line + "\n"
+                else:
+                    self.add_header_line(line)
 
         for tok in tokens:
             if tok.value == "global":
@@ -900,6 +903,7 @@ class CWriter:
         self.static_cdecl = ""
         self.static_import = ""
         self.type_hdecl = ""
+        self.global_import_global = ""
         self.in_macro = 0
         self.undef_at_end = []
         self.iter_id = 0
@@ -926,6 +930,7 @@ class CWriter:
         header = self.first_line()
         header += "#ifndef " + guard + "\n"
         header += "#define " + guard + "\n"
+        header += self.global_import_global
         header += self.type_hdecl
         header += self.header
         header += "#endif\n"
