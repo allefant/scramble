@@ -329,32 +329,44 @@ class CWriter:
         is_global = False
         name = ""
 
-        def next():
-            if is_global:
-                word = "<" + name + ".h>"
-            else:
-                if self.p.ignore_local_imports: return
-                word = '"' + name + '.h"'
-            line = "#include " + word
-            if is_static:
-                self.static_import += line + "\n"
-            else:
-                if is_global:
-                    self.global_import_global += line + "\n"
-                else:
-                    self.add_header_line(line)
-
+        condition = None
+        names = []
         for tok in tokens:
-            if tok.value == "global":
+            if condition is not None:
+                condition += [tok.value]
+            elif tok.value == "global" and not names:
                 is_global = True
+            elif tok.value == "if":
+                condition = []
             elif tok.value == ",":
-                next()
+                names.append(name)
                 name = ""
             elif tok.value in [".", "/"]:
                 name += "/"
             else:
                 name += tok.value
-        next()
+        names.append(name)
+
+        for name in names:
+            if is_global:
+                word = "<" + name + ".h>"
+            else:
+                if self.p.ignore_local_imports: return
+                word = '"' + name + '.h"'
+            include = ""
+            if condition:
+                include += "#if " + " ".join(condition) + "\n"
+            include += "#include " + word + "\n"
+            if condition:
+                include += "#endif\n"
+            if is_static:
+                self.static_import += include
+            else:
+                if is_global:
+                    self.global_import_global += include
+                else:
+                    for line in include.splitlines():
+                        self.add_header_line(line)
 
     def handle_class(self, node):
         name = node.name.value if node.name else ""

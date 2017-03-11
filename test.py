@@ -977,6 +977,16 @@ void fun(Int i) {
 }
 """)
 
+def test_import_if():
+    return c_test("""
+static import test if defined BLAH
+""",
+"""
+#if defined BLAH
+#include "test.h"
+#endif
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
