@@ -238,7 +238,8 @@ static import a, b, c
 def test_import_global():
     return c_test("""
 static import global a
-static import b, global c, d
+static import b
+static import global c, d
 """, """
 #include <a.h>
 #include "b.h"
@@ -985,6 +986,16 @@ static import test if defined BLAH
 #if defined BLAH
 #include "test.h"
 #endif
+""")
+
+def test_len():
+    return c_test("""
+Array *a
+x = len(a)
+""",
+"""
+Array * a;
+x = Array__len__(a);
 """)
 
 def main():

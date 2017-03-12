@@ -48,6 +48,15 @@ class CWriter:
     def add_iline(self, code):
         self.add_line(self.indent * "    " + code)
 
+    def handle_len(self, tok):
+        op = self.stack[0] # function call operator
+        variable = op.value[1].value
+        v = self.find_variable(variable)
+        t = v.get_type()
+        if t and t.endswith("*"):
+            return t[:-1] + "__len__"
+        return tok.value
+
     def format_op(self, tok):
         p = self.p
 
@@ -60,6 +69,7 @@ class CWriter:
             elif word == "min": word = "_scramble_min"; self.need_min = True
             elif word == "max": word = "_scramble_max"; self.need_max = True
             elif word == "with": word = ":" # for bit fields
+            elif word == "len": word = self.handle_len(tok)
 
         elif tok.kind == p.SYMBOL:
             if word == "***": word = "#" # macro string concatenation
