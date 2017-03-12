@@ -668,6 +668,9 @@ class Analyzer:
 
                     node.parent_class = self.in_class
 
+                    if name.value.startswith("_"):
+                        node.is_static = True
+
                     if len(tokens) == ti + 2:
                         # def fun:
                         self.analyze_function(name, node, tokens[:ti], [])

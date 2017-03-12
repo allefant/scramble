@@ -78,9 +78,12 @@ def c_test(prog, exp):
     if code == exp:
         return True
 
+    print("Expected:")
     print_diff(code, exp)
+    print("Found:")
     print(code)
 
+    print("Found parser tokens:")
     s = SWriter()
     code = s.generate(p)
     print(code)
@@ -675,10 +678,10 @@ typedef A B;
 
 def test_cast_prefix():
     return c_test("""
-if len < (int)sizeof(var) - 1: len++
+if l < (int)sizeof(var) - 1: l++
 """, """
-if (len < (int) sizeof (var) - 1) {
-    len++;
+if (l < (int) sizeof (var) - 1) {
+    l++;
 }
 """)  
 
@@ -996,6 +999,30 @@ x = len(a)
 """
 Array * a;
 x = Array__len__(a);
+""")
+
+def test_len_error():
+    return err_test("""
+int len = 0
+""",
+"test: 2/4: len() needs an argument")
+
+def test_len_error2():
+    return err_test("""
+x = len(0)
+""",
+"test: 2/4: Cannot use len() on 0")
+
+def test_underscore():
+    return c_test("""
+def _fun:
+    pass
+""",
+"""
+static void _fun(void);
+static void _fun(void) {
+    ;
+}
 """)
 
 def main():

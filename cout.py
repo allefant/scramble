@@ -50,8 +50,12 @@ class CWriter:
 
     def handle_len(self, tok):
         op = self.stack[0] # function call operator
+        if type(op) != parser.Node or op.kind != self.p.OPERATOR:
+            self.p.error_token("len() needs an argument", tok)
         variable = op.value[1].value
         v = self.find_variable(variable)
+        if not v:
+            self.p.error_token("Cannot use len() on " + variable, tok)
         t = v.get_type()
         if t and t.endswith("*"):
             return t[:-1] + "__len__"
