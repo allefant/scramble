@@ -55,7 +55,7 @@ class CWriter:
         variable = op.value[1].value
         v = self.find_variable(variable)
         if not v:
-            self.p.error_token("Cannot use len() on " + variable, tok)
+            self.p.error_token("Cannot use len() on " + str(variable), tok)
         t = v.get_type()
         if t and t.endswith("*"):
             return t[:-1] + "__len__"
@@ -761,6 +761,14 @@ class CWriter:
                 if parameter.name == name:
                     return parameter.as_variable()
 
+    def find_function(self, name):
+        f = self.p.analyzer.functions.get(name)
+        if f is not None:
+            # .name
+            # .parameters
+            # .ret
+            return f
+
     def check_auto_assignment(self, first):
         if first.kind == self.p.OPERATOR:
             tokens = first.value
@@ -769,7 +777,12 @@ class CWriter:
                 if tokens[1].kind == self.p.OPERATOR:
                     if analyzer.Analyzer.is_tok(tokens[1].value[0], "auto"):
                         v = self.find_variable(tokens[2].value)
-                        first.value = (tokens[0], v.replace(tokens[1].value[1])) + tokens[2:]
+                        if v:
+                            first.value = (tokens[0], v.replace(tokens[1].value[1])) + tokens[2:]
+                        else:
+                            f = self.find_function(tokens[2].value[0].value)
+                            if f:
+                                first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
 
     def write_line(self, s, block):
         """

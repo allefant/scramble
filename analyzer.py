@@ -38,6 +38,13 @@ class Variable:
     def get_type(self):
         P = parser.Parser
         n = self.declaration
+        if isinstance(n.value[0], str):
+            if n.value[0] == ".":
+               pass
+            else:
+                print(n)
+            return n.value[0]
+            
         if Analyzer.is_sym(n.value[0], "*"):
             star = "*"
             name = n.value[1]
@@ -214,6 +221,7 @@ class Analyzer:
             )
 
     @staticmethod
+    
     def is_sym(token, value = None):
         if token and token.kind == parser.Parser.SYMBOL:
             if value is not None:
@@ -687,7 +695,7 @@ class Analyzer:
                         self.analyze_function(name, node,
                             tokens[:ti],
                             tokens[ti + 3:-1])
-                    self.functions[name] = node
+                    self.functions[name.value] = node
 
                     node.kind = self.parser.FUNCTION
 

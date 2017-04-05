@@ -79,7 +79,7 @@ def c_test(prog, exp):
         return True
 
     print("Expected:")
-    print_diff(code, exp)
+    print_diff(exp, code)
     print("Found:")
     print(code)
 
@@ -1024,6 +1024,19 @@ static void _fun(void) {
     ;
 }
 """)
+
+def test_auto_return():
+    return c_test("""
+def fun -> X*:
+    pass
+auto x = fun();
+""",
+"""
+X* fun(void) {
+    ;
+}
+X * x = fun();
+""");
 
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
