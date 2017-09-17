@@ -4,6 +4,7 @@ from sout import SWriter
 from cout import *
 from eout import EWriter
 import sys, traceback
+import module
 
 G = "\x1b[1;32m"
 R = "\x1b[1;31m"
@@ -62,10 +63,18 @@ def print_diff(new, old):
         sys.stdout.write("line missing\n")
     sys.stdout.write(O)
 
-def c_test(prog, exp):
+def c_test(prog, exp, external = None):
+
     exp = exp.strip()
     exp = '#include "test.h"\n' + exp
     p = Parser("test", prog, comments = True)
+
+    if external:
+        p2 = Parser("external", external)
+        p2.parse()
+        ecode = EWriter().generate(p2)
+        module.parse_e_file(p, ecode)
+    
     try:
         p.parse()
         c = CWriter()
@@ -1036,7 +1045,18 @@ X* fun(void) {
     ;
 }
 X * x = fun();
-""");
+""")
+
+def test_external_auto_return():
+    return c_test("""
+auto x = fun();
+""",
+"""
+X * x = fun();
+""", external = """
+def fun -> X*:
+    pass
+""")
 
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None

@@ -768,6 +768,9 @@ class CWriter:
             # .parameters
             # .ret
             return f
+        f = self.p.external_functions.get(name)
+        if f is not None:
+            return f
 
     def check_auto_assignment(self, first):
         if first.kind == self.p.OPERATOR:

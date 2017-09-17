@@ -90,6 +90,7 @@ class Parser:
         self.unnamed_token = Token(Parser.TOKEN, "unnamed", 0, 0)
         self.external_types = {}
         self.external_variables = {}
+        self.external_functions = {}
         if not options:
             class Options:
                 def __getattr__(o, k):
@@ -422,6 +423,16 @@ class Parser:
 
     def add_external_variable(self, variable : analyzer.Variable):
         self.external_variables[variable.name] = variable
+
+    def add_external_function(self, fname, rtype):
+        t = Token(Parser.STRING, fname, 0, 0)
+        node = Node(Parser.FUNCTION, [t])
+        node.name = fname
+        node.ret = []
+        for rt in rtype.split():
+            t = Token(Parser.STRING, rt, 0, 0)
+            node.ret.append(t)
+        self.external_functions[fname] = node
 
 def get_row_col(node):
 

@@ -14,7 +14,9 @@ def parse_e_file(p : parser.Parser, text):
         if len(a) == 1:
             name = a[0]
             if name.startswith("def "):
-                pass
+                rtype = name[name.rfind("->") + 2:].strip()
+                fname = name[4:name.find(" ", 4)]
+                p.add_external_function(fname, rtype)
             elif name not in p.external_types:
                 block = parser.Node(p.BLOCK, [])
                 block.variables = []
