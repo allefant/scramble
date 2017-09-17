@@ -502,6 +502,11 @@ class Analyzer:
                 if first.kind == self.parser.OPERATOR:
                     tokens = first.value
                     op = tokens[0]
+                    # add auto variables - even if we don't know the
+                    # real type yet at this point
+                    if self.is_tok(op, "auto"):
+                        v = Variable(first.value[1], first)
+                        block_node.variables.append(v)
                     if op.kind == self.parser.SYMBOL:
                         if op.value == "*":
                             if len(tokens) == 3:

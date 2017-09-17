@@ -424,13 +424,25 @@ class Parser:
     def add_external_variable(self, variable : analyzer.Variable):
         self.external_variables[variable.name] = variable
 
-    def add_external_function(self, fname, rtype):
+    def add_external_function(self, definition):
+        """
+        definition is in the form written by eout.EWriter:
+        (def) (name) (->) (rtype)
+        """
+
+        rtype = definition[definition.rfind("->") + 2:].strip()
+        fname = definition[4:definition.find(" ", 4)]
+        
         t = Token(Parser.STRING, fname, 0, 0)
         node = Node(Parser.FUNCTION, [t])
         node.name = fname
         node.ret = []
         for rt in rtype.split():
-            t = Token(Parser.STRING, rt, 0, 0)
+            # TODO: maybe re-use a separate parser in module.py to
+            # tokenize/parse those definitions, maybe even use a
+            # separate Parser to do so
+            tokt = Parser.STRING if rt != "*" else Parser.SYMBOL
+            t = Token(tokt, rt, 0, 0)
             node.ret.append(t)
         self.external_functions[fname] = node
 

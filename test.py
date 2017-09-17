@@ -1058,6 +1058,22 @@ def fun -> X*:
     pass
 """)
 
+def test_external_auto_pointer():
+    return c_test("""
+def ba:
+    auto x = fun();
+    x.a = 2
+""",
+"""
+void ba(void) {
+    X * x = fun();
+    x->a = 2;
+}
+""", external = """
+def fun -> X*:
+    pass
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
