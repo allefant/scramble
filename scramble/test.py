@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from parser import *
-from sout import SWriter
-from cout import *
-from eout import EWriter
+from .parser import *
+from . from sout import SWriter
+from . from cout import *
+from . from eout import EWriter
 import sys, traceback
 import module
 

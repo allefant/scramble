@@ -1,4 +1,4 @@
-import parser, analyzer, helper
+from . import parser, analyzer, helper
 
 is_sym = analyzer.Analyzer.is_sym
 is_op = analyzer.Analyzer.is_op

@@ -1,10 +1,10 @@
 import curses
 from curses.textpad import Textbox, rectangle
 import traceback
-import parser
-import cout
-import sout
-import dout
+from . import parser
+from . import cout
+from . import sout
+from . import dout
 
 def restore():
     curses.nocbreak()

@@ -1,4 +1,4 @@
-import analyzer
+from . import analyzer
 
 class Parameter:
     name = ""

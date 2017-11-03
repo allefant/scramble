@@ -1,4 +1,4 @@
-import cout
+from . import cout
 import re
 import time
 

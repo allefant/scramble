@@ -1,5 +1,5 @@
-from parser import *
-import helper
+from .parser import *
+from . import helper
 
 class_dep = {}
 imports = {}

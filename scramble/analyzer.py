@@ -1,5 +1,5 @@
-import helper
-import parser
+from . import helper
+from . import parser
 
 class Variable:
     def __init__(self, name, declaration):

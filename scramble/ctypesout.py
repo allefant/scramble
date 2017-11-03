@@ -1,4 +1,4 @@
-import helper
+from . import helper
 
 class CTypesWriter:
     def __init__(self):

@@ -1,5 +1,5 @@
 import os
-import analyzer
+from . import analyzer
 import inspect
 
 class MyError(Exception):

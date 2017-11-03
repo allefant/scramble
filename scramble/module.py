@@ -1,10 +1,10 @@
-import parser
-import analyzer
+from . import parser
+from . import analyzer
 import glob
 
 def parse_all(p, modules):
     for module in modules:
-        for e in glob.glob(module + "/*.e"):
+        for e in glob.glob(module + "/**/*.e", recursive = True):
             parse_e_file(p, open(e).read())
 
 def parse_e_file(p : parser.Parser, text):
