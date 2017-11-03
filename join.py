@@ -24,10 +24,16 @@ def parse_block(p, b, fname):
                         if is_global:
                             imports[fname].append(name)
                             name = ""
+                    else:
+                        name += x.value
                 elif x.kind == p.TOKEN:
                     if x.value == "global":
                         is_global = True
                         name = ""
+                    elif x.value == "if":
+                        name += " if "
+                    elif x.value == "defined":
+                        name += "defined "
                     else:
                         name += x.value
             if is_global and name:
