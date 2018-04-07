@@ -776,19 +776,51 @@ class CWriter:
             return f
 
     def check_auto_assignment(self, first):
+        """
+        If we assign to a variable with type "auto" try to infer the
+        real type.
+        """
         if first.kind == self.p.OPERATOR:
             tokens = first.value
             op = tokens[0]
             if analyzer.Analyzer.is_sym(op, "="):
                 if tokens[1].kind == self.p.OPERATOR:
-                    if analyzer.Analyzer.is_tok(tokens[1].value[0], "auto"):
-                        v = self.find_variable(tokens[2].value)
+                    if is_tok(tokens[1].value[0], "auto"):
+
+                        # detect form auto var = foo.bar
+                        dot = None
+                        if tokens[2].kind == self.p.OPERATOR and is_sym(tokens[2].value[0], "."):
+                            var = tokens[2].value[1].value # foo in example above
+                            dot = tokens[2].value[2].value # bar in example above
+                            # FIXME: detect arbitrary chain of . not just the first
+                        else:
+                            var = tokens[2].value
+
+                        name = tokens[1].value[1]
+                        v = self.find_variable(var)
                         if v:
-                            first.value = (tokens[0], v.replace(tokens[1].value[1])) + tokens[2:]
+                            if dot:
+                                tname = v.get_type()
+                                if tname.endswith("*"): tname = tname[:-1]
+                                t = self.p.analyzer.types.get(tname, None)
+                                if t:
+                                    for v2 in t.block.variables:
+                                        if v2.name == dot:
+                                            v = v2
+                                if not t:
+                                    t = self.p.external_types.get(tname, None)
+                                    if t:
+                                        for v2 in t.variables:
+                                            if v2.name == dot:
+                                                v = v2
+                            # take the variable declaration and replace the name with our auto variable name
+                            first.value = (tokens[0], v.replace(name)) + tokens[2:]
+                            return name
                         else:
                             f = self.find_function(tokens[2].value[0].value)
                             if f:
                                 first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
+                                return name
 
     def write_line(self, s, block):
         """
@@ -819,7 +851,14 @@ class CWriter:
                     self.out_crow += 1
                 return
 
-            self.check_auto_assignment(tokens[0])
+            name = self.check_auto_assignment(tokens[0])
+            if name:
+                # if we found an auto assignment, also update the variable declaration
+                # TODO: can't we already handle "auto" when finding the variables?
+                for block2 in self.current_block:
+                    for v2 in block2.variables:
+                        if name.value == v2.name:
+                            v2.declaration = tokens[0].value[1]
 
             line = self.format_line(tokens)
             if s.is_static:

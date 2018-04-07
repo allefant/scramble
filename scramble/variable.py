@@ -1,3 +1,5 @@
+from . import parser
+from . import analyzer
 
 class Variable:
     def __init__(self, name, declaration):
@@ -5,10 +7,10 @@ class Variable:
         self.declaration = declaration
         if type(name) is str:
             self.name = name
-        elif Analyzer.is_tok(name):
+        elif analyzer.Analyzer.is_tok(name):
             self.name = name.value
         elif name.kind == P.OPERATOR:
-            if Analyzer.is_sym(name.value[0], "*"):
+            if analyzer.Analyzer.is_sym(name.value[0], "*"):
                 name = name.value[1]
             else:
                 while name.kind == P.OPERATOR:
@@ -43,7 +45,7 @@ class Variable:
                 print(n)
             return n.value[0]
             
-        if Analyzer.is_sym(n.value[0], "*"):
+        if analyzer.Analyzer.is_sym(n.value[0], "*"):
             star = "*"
             name = n.value[1]
 
@@ -51,10 +53,10 @@ class Variable:
                 op3 = n.value[2]
                 if op3.kind == P.OPERATOR:
                     # TODO: We only detect ** pointers but not *** and so on
-                    if Analyzer.is_sym(op3.value[0], "*"):
+                    if analyzer.Analyzer.is_sym(op3.value[0], "*"):
                         star += "*"
-            
-            if Analyzer.is_tok(name):
+
+            if analyzer.Analyzer.is_tok(name):
                 return name.value + star
             elif name.kind == P.OPERATOR:
                 if name.value[0].kind == P.TOKEN:

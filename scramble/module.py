@@ -28,7 +28,8 @@ def parse_e_file(p : parser.Parser, text):
                 node = parser.Node(p.OPERATOR, [
                     # TODO: ** and so on pointers
                     parser.Token(p.SYMBOL, "*", 0, 0),
-                    parser.Token(p.TOKEN, kind.strip(" *"), 0, 0)
+                    parser.Token(p.TOKEN, kind.strip(" *"), 0, 0),
+                    parser.Token(p.TOKEN, name.strip(), 0, 0)
                     ])
                 v = analyzer.Variable(name.strip(), node)
                 if name.startswith(" "):

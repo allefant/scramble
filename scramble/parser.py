@@ -441,7 +441,7 @@ class Parser:
             # TODO: maybe re-use a separate parser in module.py to
             # tokenize/parse those definitions, maybe even use a
             # separate Parser to do so
-            tokt = Parser.STRING if rt != "*" else Parser.SYMBOL
+            tokt = Parser.TOKEN if rt != "*" else Parser.SYMBOL
             t = Token(tokt, rt, 0, 0)
             node.ret.append(t)
         self.external_functions[fname] = node

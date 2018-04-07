@@ -1,5 +1,6 @@
 from . import helper
 from . import parser
+from .variable import Variable
 
 class Analyzer:
     def __init__(self, parser):

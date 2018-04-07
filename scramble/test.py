@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from .parser import *
-from . from sout import SWriter
-from . from cout import *
-from . from eout import EWriter
+from .sout import SWriter
+from .cout import *
+from .eout import EWriter
 import sys, traceback
-import module
+from . import module
 
 G = "\x1b[1;32m"
 R = "\x1b[1;31m"
@@ -1071,6 +1071,108 @@ void ba(void) {
 }
 """, external = """
 def fun -> X*:
+    pass
+""")
+
+def test_auto_struct():
+    return c_test("""
+class A:
+    A* x
+    B* y
+    C* z
+def fun:
+    A *a
+    auto b = a.x
+    auto c = a
+    auto d = a.y
+    auto e = a.z
+""",
+"""
+void fun(void) {
+    A * a;
+    A * b = a->x;
+    A * c = a;
+    B * d = a->y;
+    C * e = a->z;
+}
+""")
+
+def test_external_auto_struct():
+    return c_test("""
+def fun:
+    A *a
+    auto b = a.x
+    auto c = a
+    auto d = a.y
+    auto e = a.z
+""",
+"""
+void fun(void) {
+    A * a;
+    A * b = a->x;
+    A * c = a;
+    B * d = a->y;
+    C * e = a->z;
+}
+""",
+external = """
+class A:
+    A* x
+    B* y
+    C* z
+""")
+
+def test_auto_pointer():
+    return c_test("""
+class A:
+    B* x
+class B:
+    C* c
+def fun:
+    A *a
+    auto b = a.x
+    auto c = b.c
+""", """
+void fun(void) {
+    A * a;
+    B * b = a->x;
+    C * c = b->c;
+}
+""")
+
+def test_auto_function_pointer():
+    return c_test("""
+class A:
+    B* x
+def fun_a -> A*:
+    pass
+def fun:
+    auto a = fun_a()
+    auto b = a.x
+""", """
+A* fun_a(void) {
+    ;
+}
+void fun(void) {
+    A * a = fun_a();
+    B * b = a->x;
+}
+""")
+
+def test_auto_external_function_pointer():
+    return c_test("""
+class A:
+    B* x
+def fun:
+    auto a = fun_a()
+    auto b = a.x
+""", """
+void fun(void) {
+    A * a = fun_a();
+    B * b = a->x;
+}
+""", external = """
+def fun_a -> A*:
     pass
 """)
 
