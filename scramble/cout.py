@@ -688,6 +688,8 @@ class CWriter:
         self.add_iline(line)
         
         self.indent += 1
+        if not statement.block:
+            p.error_token("Need loop block", token_for)
         self.write_block(statement.block)
         self.indent -= 1
         self.add_iline("}")
