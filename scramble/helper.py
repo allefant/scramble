@@ -39,6 +39,12 @@ def get_pointer_member(x : Parameter, name : str, p):
                 for v in t.block.variables:
                     if v.name == name:
                         return v
+            else:
+                t = p.external_types.get(d[1].value)
+                if t:
+                    for v in t.variables:
+                        if v.name == name:
+                            return v
     return None
 
 def parse_parameter_list(p, tokens):

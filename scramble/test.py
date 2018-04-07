@@ -800,6 +800,26 @@ void fun(X * x) {
 }
     """)
 
+def test_external_class_access():
+    return c_test("""
+X *x
+x.a = None
+x.a.b = None
+x.a.b.hu = None
+    """, """
+X * x;
+x->a = NULL;
+x->a->b = NULL;
+x->a->b->hu = NULL;
+    """, external = """
+static class B:
+    pass
+static class A:
+    B *b
+static class X:
+    A *a
+""")
+
 def test_alternative_return():
     return c_test("""
 def fun(int x) -> int:
