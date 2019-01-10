@@ -186,6 +186,8 @@ def find_dots(p : "Parser", token : "Node"):
             if len(x.value) >= 3 and x.value[0].kind == p.SYMBOL:
                 if x.value[0].value == ".":
                     r.insert(0, x.value[2])
+                    if not x.value[1]:
+                        p.error_token("Need name after dot!", x)
                     go_up(x.value[1])
                     return
         r.insert(0, x)

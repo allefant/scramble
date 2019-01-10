@@ -819,6 +819,10 @@ class CWriter:
                         else:
                             f = self.find_function(tokens[2].value[0].value)
                             if f:
+                                if not f.ret:
+                                    self.p.error_token("Cannot determine function return type", tokens[2])
+                                if len(f.ret) < 2:
+                                    self.p.error_token("Right now auto only works with pointers", tokens[2])
                                 first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
                                 return name
 
