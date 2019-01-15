@@ -667,6 +667,23 @@ class Analyzer:
 
                 check_variable_declaration(node.value[0], node.is_global)
 
+                if block_node is self.root:
+                    if not node.is_global and not node.is_static:
+                        # maybe it's a file-local variable?
+                        # we basically assume anything not handled above
+                        # and declared global must be static
+                        is_call = False
+                        if node.value[0].kind == p.OPERATOR:
+                            op = node.value[0]
+                            # we don't want to static macro calls though...
+                            if self.is_tok(op.value[0]):
+                                if op.value[1].kind == p.OPERATOR:
+                                    op1 = op.value[1]
+                                    if self.is_sym(op1.value[0], "("):
+                                        is_call = True
+                        if not is_call:
+                            node.is_static = True
+
             if node.kind == self.parser.BLOCK:
                 self.analyze_block(node)
                 

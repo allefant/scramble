@@ -149,7 +149,7 @@ while (a = 1): a = 2 # another one
 """, """
 while ((a = 1)) {
 }
-a = 2 /* a comment */;
+static a = 2 /* a comment */;
 while ((a = 1)) {
     a = 2 /* another one */;
 }
@@ -273,6 +273,24 @@ def test_static():
     return h_test("""
 static def a(): pass
 def b(): pass""", "void b(void);")
+
+def test_static_variable():
+    return c_test("""
+int a
+static int b
+global int c
+""", """
+static int a;
+static int b;
+int c;
+""")
+
+def test_static_call():
+    return c_test("""
+fun() # a macro call
+""", """
+fun() /* a macro call */;
+""")
 
 def test_macro():
     return h_test("""
@@ -424,7 +442,7 @@ B'
 C
 '''
     """, r"""
-x = "\n"
+static x = "\n"
     "A\"\n"
     "B'\n"
     "C\n"
@@ -455,14 +473,14 @@ def test_array_init():
     return c_test("""
 int a[] = {1, 2, 3}
 """, """
-int a [] = {1, 2, 3};
+static int a [] = {1, 2, 3};
 """)
 
 def test_array_init2():
     return c_test("""
 LandVector v = {a[0], a[1], a[2]}
 """, """
-LandVector v = {a [0], a [1], a [2]};
+static LandVector v = {a [0], a [1], a [2]};
 """)
 
 def test_empty_call():
@@ -475,14 +493,14 @@ c ( )
 a();
 b();
 c();
-(d)();
+static (d)();
 """)
 
 def test_cast():
     return c_test("""
 x = (unsigned int)(2)
 """, """
-x = (unsigned int)(2);
+static x = (unsigned int)(2);
 """)
 
 def test_cast2():
@@ -541,21 +559,21 @@ def test_string_concat():
     return c_test("""
 x = "a" "b"
 """, """
-x = "a""b";
+static x = "a""b";
 """)
 
 def test_postfix():
     return c_test("""
 x++
 """, """
-x++;
+static x++;
 """)
 
 def test_prefix():
     return c_test("""
 --x
 """, """
---x;
+static --x;
 """)
 
 def test_var():
@@ -668,7 +686,7 @@ def test_no_extra_parentheses():
     return c_test("""
 x = (void *)&(int)y
 """, """
-x = (void *) & (int) y;
+static x = (void *) & (int) y;
 """)
 
 def test_pointer_params():
@@ -718,7 +736,7 @@ def test_global_var_comment():
 int b
 """, """
 // blah
-int b;
+static int b;
 """)
 
 def test_multibyte():
@@ -767,10 +785,10 @@ struct A {
 struct X {
     A * a;
 };
-X * x;
-x->a = NULL;
-x->a->b = NULL;
-x->a->b->hu = NULL;
+static X * x;
+static x->a = NULL;
+static x->a->b = NULL;
+static x->a->b->hu = NULL;
     """)
 
 def test_class_access2():
@@ -782,8 +800,8 @@ class X:
 X *x
 x.a.b.c = None
     """, """
-X * x;
-x->a->b->c = NULL;
+static X * x;
+static x->a->b->c = NULL;
     """)
 
 def test_class_access3():
@@ -807,10 +825,10 @@ x.a = None
 x.a.b = None
 x.a.b.hu = None
     """, """
-X * x;
-x->a = NULL;
-x->a->b = NULL;
-x->a->b->hu = NULL;
+static X * x;
+static x->a = NULL;
+static x->a->b = NULL;
+static x->a->b->hu = NULL;
     """, external = """
 static class B:
     pass
@@ -867,7 +885,7 @@ def test_integer_div():
     return c_test("""
 x = a // b
 """, """
-x = (int)(a / b);
+static x = (int)(a / b);
 """)
 
 def test_auto():
@@ -875,8 +893,8 @@ def test_auto():
 Blah *x
 auto y = x
 """, """
-Blah * x;
-Blah * y = x;
+static Blah * x;
+static Blah * y = x;
 """)
 
 def test_auto_global():
@@ -885,7 +903,7 @@ Blah *x
 def fun:
     auto y = x
 """, """
-Blah * x;
+static Blah * x;
 void fun(void) {
     Blah * y = x;
 }
@@ -999,7 +1017,7 @@ void fun(void);
 
 def test_typedef():
     return c_test("""
-void fun(Int i):
+def fun(Int i):
     pass
 static typedef int Int
 """,
@@ -1026,8 +1044,8 @@ Array *a
 x = len(a)
 """,
 """
-Array * a;
-x = Array__len__(a);
+static Array * a;
+static x = Array__len__(a);
 """)
 
 def test_len_error():
@@ -1064,7 +1082,7 @@ auto x = fun();
 X* fun(void) {
     ;
 }
-X * x = fun();
+static X * x = fun();
 """)
 
 def test_external_auto_return():
@@ -1072,7 +1090,7 @@ def test_external_auto_return():
 auto x = fun();
 """,
 """
-X * x = fun();
+static X * x = fun();
 """, external = """
 def fun -> X*:
     pass
