@@ -585,6 +585,7 @@ class Analyzer:
 
                 def_pos = self.find_token_pos(tokens, "def")
 
+                # function definition
                 if def_pos is not None:
                     ti = def_pos
 
