@@ -24,6 +24,8 @@ class Analyzer:
         "&=" : 1,
         "^=" : 1,
         "|=" : 1,
+        "if" : 2,
+        "else" : 2,
         "?" : 2,
         ":" : 2,
         "or" : 3,
@@ -270,13 +272,7 @@ class Analyzer:
         while ti < len(row):
             token = row[ti]
             if self.is_tok(token):
-                if token.value == "and":
-                    token.kind = p.SYMBOL
-                elif token.value == "or":
-                    token.kind = p.SYMBOL
-                elif token.value == "not":
-                    token.kind = p.SYMBOL
-                elif token.value == "sizeof":
+                if token.value in ["and", "or", "not", "sizeof", "if", "else"]:
                     token.kind = p.SYMBOL
 
             # macro concatenation

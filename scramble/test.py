@@ -1214,6 +1214,16 @@ def fun_a -> A*:
     pass
 """)
 
+def test_if_expression():
+    return c_test("""
+def fun:
+    int x = 3 + 1 if a == "three" else 0 + 4
+""", """
+void fun(void) {
+    int x = a == "three" ? 3 + 1 : 0 + 4;
+}
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0

@@ -113,6 +113,32 @@ class CWriter:
 
         return word
 
+    def rearrange_if_expression(self, token : parser.Node):
+        """
+        If we see something like:
+        a if b else c
+        Convert it to:
+        b ? a : c
+
+        The tokens will actually be:
+        (if, a, (else, b, c))
+        and we want them as:
+        (?, b, (:, a, c))
+        """
+        else_node = token.value[2]
+        if_token = token.value[0]
+        a_node = token.value[1]
+        else_token = else_node.value[0]
+        if else_token.value != "else":
+            self.p.error_token("Expected 'else' in if-expression but found '" + else_token.value + "'.", token)
+        b_node = else_node.value[1]
+        c_node = else_node.value[2]
+        # now let's do the switcheroo
+        if_token.value = "?"
+        else_token.value = ":"
+        token.value = (if_token, b_node, else_node)
+        else_node.value = (else_token, a_node, c_node)
+
     def format_expression_as_list(self, token : parser.Node):
         """
         Given an operator node, return a list of tokens/nodes/strings to
@@ -138,6 +164,12 @@ class CWriter:
             return r
 
         op = token.value[0].value
+        if op not in a.level:
+            p.error_token("Unknown operator '" + op + "' found.", token)
+        
+        # deal with if expression
+        if op == "if":
+            self.rearrange_if_expression(token)
     
         left = None
         right = None
