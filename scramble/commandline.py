@@ -10,6 +10,7 @@ from . import analyzer
 from . import join
 from . import terminal
 from . import module
+from . import scanner
 
 def main():
     op = argparse.ArgumentParser(add_help = False)
@@ -28,6 +29,7 @@ def main():
     o("-e", "--efile", help = "extra output file")
     o("-j", "--join", nargs = "+", help = "files to join")
     o("-o", "--output", help = "source code output file")
+    o("-S", "--scan", help = "scan for (direct) dependencies, other output is ignored")
     o("-t", "--ctypes", help = "ctypes output file")
     o("-T", "--terminal", action = "store_true")
     o("-d", "--dfile", help = "output api docs")
@@ -38,6 +40,10 @@ def main():
 
     if options.terminal:
         terminal.run()
+        exit(0)
+
+    if options.scan:
+        scanner.scan(options.scan)
         exit(0)
 
     if options.join:
