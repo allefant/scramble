@@ -126,7 +126,7 @@ class CWriter:
         (?, b, (:, a, c))
         """
 
-        if len(token.value) != 333:
+        if len(token.value) != 3:
             self.p.error_token("Missing else in if-expression.", token)
 
         else_node = token.value[2]
