@@ -1224,6 +1224,21 @@ void fun(void) {
 }
 """)
 
+def test_typeinfo():
+    return c_test("""
+class A:
+    int* x
+print(scramble_type(A).field_names[0])
+""", """
+#define scramble_type(X) __scramble_type_##X
+struct {
+    char const * field_names[] = {
+        "x",
+    };
+} __scramble_type_A;
+print(scramble_type (A).field_names [0]);
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0

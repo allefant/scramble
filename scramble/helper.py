@@ -17,6 +17,8 @@ def pointer_indirection(tokens, p):
     i = 0
     par = 0
     for tok in tokens:
+        if type(tok) == str:
+            p.error(f"Unexpected token {tok}!")
         if tok.kind == p.SYMBOL:
             if tok.value == "(":
                 par += 1

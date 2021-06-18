@@ -2,6 +2,8 @@ from . import cout
 import re
 import time
 
+VC_BASE = "https://github.com/allefant/land/blob/master/src"
+
 class DWriter(cout.CWriter):
     def __init__(self):
         pass
@@ -53,8 +55,8 @@ class DWriter(cout.CWriter):
                 self.doc(s)
                 self.pl()
             if s.kind == p.FUNCTION and not s.is_static:
-                link = "http://sourceforge.net/p/lland/land/ci/master/tree/src/"
-                link += self.name[5:] + ".py#l" + str(s.value[0].row)
+                link = f"{VC_BASE}/"
+                link += self.name[5:] + ".py#L" + str(s.value[0].row)
                 self.pl("## [" + str(s.name.value) + "](" +
                     link + ")")
                 if s.parameters:
@@ -81,8 +83,8 @@ class DWriter(cout.CWriter):
                     pass
                 self.pl()
             if s.kind == p.TYPE and not s.is_static:
-                link = "http://sourceforge.net/p/lland/land/ci/master/tree/src/"
-                link += self.name[5:] + ".py#l" + str(s.value[0].row)
+                link = f"{VC_BASE}/"
+                link += self.name[5:] + ".py#L" + str(s.value[0].row)
                 self.pl("## [" + str(s.name.value) + "](" +
                     link + ")")
 

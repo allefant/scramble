@@ -44,7 +44,7 @@ class SWriter:
             if s.kind == p.LINE:
                 self.write_line(s, "LINE ", next and next.kind == p.BLOCK)
             elif s.kind == p.STATEMENT:
-                self.write_line(s, "STAT ", True)
+                self.write_line(s, "STAT " + s.name.value + " ", True)
                 if s.name.value == "for":
                     if s.sub_kind in ["range", "in", "while"]:
                         self.stack.append(s.part)

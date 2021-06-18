@@ -49,6 +49,8 @@ class CWriter:
         self.add_line(self.indent * "    " + code)
 
     def handle_len(self, tok):
+        if not self.stack:
+            self.p.error_token("len() needs an argument", tok)
         op = self.stack[0] # function call operator
         if type(op) != parser.Node or op.kind != self.p.OPERATOR:
             self.p.error_token("len() needs an argument", tok)
@@ -60,6 +62,15 @@ class CWriter:
         if t and t.endswith("*"):
             return t[:-1] + "__len__"
         return tok.value
+
+    def handle_scramble_type(self, tok):
+        if len(self.stack) != 3:
+            self.p.error_token("scramble_type must be used like scramble_type(X).field_names[]", tok)
+            return
+        dot = self.stack[1]
+        param = dot.value[1]
+        name = param.value[1]
+        self.need_scramble_types.append(name.value)
 
     def format_op(self, tok):
         p = self.p
@@ -74,6 +85,7 @@ class CWriter:
             elif word == "max": word = "_scramble_max"; self.need_max = True
             elif word == "with": word = ":" # for bit fields
             elif word == "len": word = self.handle_len(tok)
+            elif word == "scramble_type": self.handle_scramble_type(tok)
 
         elif tok.kind == p.SYMBOL:
             if word == "***": word = "#" # macro string concatenation
@@ -159,7 +171,7 @@ class CWriter:
                 if is_sym(token.value[1].value[0], "("):
                     r += []
                 else:
-                    r += [" "]
+                    r += [" "] # what the...?
             else:
                 # handles e.g. x = L'♥'
                 if token.value[1].kind != p.STRING:
@@ -232,6 +244,7 @@ class CWriter:
                 if self.current_function:
                     for parameter in self.current_function[-1].parameters:
                         if parameter.name == x.value:
+
                             if helper.pointer_indirection(
                                     parameter.declaration.value, p) > 0:
                                 return parameter
@@ -853,14 +866,17 @@ class CWriter:
                             first.value = (tokens[0], v.replace(name)) + tokens[2:]
                             return name
                         else:
-                            f = self.find_function(tokens[2].value[0].value)
-                            if f:
-                                if not f.ret:
-                                    self.p.error_token("Cannot determine function return type", tokens[2])
-                                if len(f.ret) < 2:
-                                    self.p.error_token("Right now auto only works with pointers", tokens[2])
-                                first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
-                                return name
+                            if isinstance(tokens[2].value[0], str):
+                                self.p.error_token("Unexpected token ", tokens[2])
+                            else:
+                                f = self.find_function(tokens[2].value[0].value)
+                                if f:
+                                    if not f.ret:
+                                        self.p.error_token("Cannot determine function return type", tokens[2])
+                                    if len(f.ret) < 2:
+                                        self.p.error_token("Right now auto only works with pointers", tokens[2])
+                                    first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
+                                    return name
 
     def write_line(self, s, block):
         """
@@ -1019,6 +1035,7 @@ class CWriter:
         self.prefix = prefix
         self.need_min = False
         self.need_max = False
+        self.need_scramble_types = []
         self.in_header = False
         self.out_crow = 0 # line-number of c-source
         self.out_hrow = 0 # line number of header
@@ -1043,11 +1060,27 @@ class CWriter:
         code += "#include \"" + name + ".h\"\n"
         if self.need_min: code += "#define _scramble_min(x, y) ((y) < (x) ? (y) : (x))\n"
         if self.need_max: code += "#define _scramble_max(x, y) ((y) > (x) ? (y) : (x))\n"
+        if self.need_scramble_types:
+            code += "#define scramble_type(X) __scramble_type_##X\n"
         code += self.type_cdecl
         code += self.static_import
         if self.before_first_function_code:
             code += self.before_first_function_code
         code += self.static_cdecl
+
+        for typeinfo in self.need_scramble_types:
+            code += "struct {\n"
+            code += "    char const * field_names[] = {\n"
+            t = None
+            t = self.p.analyzer.types.get(typeinfo, None)
+            if not t:
+                t = self.p.external_types.get(typeinfo, None)
+            if t:
+                for v in t.block.variables:
+                    code += '        "' + v.name + '",\n'
+            code += "    };\n"
+            code += "} __scramble_type_" + typeinfo + ";\n";
+        
         code += self.code
         if not no_lines: code += self.note
 
