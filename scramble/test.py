@@ -1239,6 +1239,73 @@ struct {
 print(scramble_type (A).field_names [0]);
 """)
 
+def test_auto_struct_pointer():
+    return c_test("""
+class A:
+    B* b
+def fun(A *a):
+    int x = a.b.x
+""", """
+void fun(A * a) {
+    int x = a->b->x;
+}
+""", external = """
+class B:
+    int x
+""")
+
+def test_float_constant():
+    return c_test("""
+def x(): print(2.0e-2)
+""", """
+void x(void) {
+    print(2.0e-2);
+}""")
+
+def test_float_constant2():
+    # numbers with "e-" are a token but otherwise e- is not
+    return c_test("""
+def x(): print(e-2)
+""", """
+void x(void) {
+    print(e - 2);
+}""")
+
+def test_named_parameter():
+        return c_test("""
+def x(a): print(a)
+def test:
+    v=x(a=1)
+""", """
+void x(a) {
+    print(a);
+}
+void test(void) {
+    v = x(1 /* a */);
+}
+""")
+
+def test_named_parameter2():
+        return c_test("""
+def x(a, b, c): pass
+def test:
+    x(a=1)
+    x(a=1,b=2,c=3)
+    x(a=x(a=2),b=0)
+    x(a=x(a=2,b=fun(3)))
+""", """
+void x(a, b, c) {
+    ;
+}
+void test(void) {
+    x(1 /* a */);
+    x(1 /* a */, 2 /* b */, 3 /* c */);
+    x( /* a */x(2 /* a */), 0 /* b */);
+    x( /* a */x(2 /* a */,  /* b */fun(3)));
+}
+
+""")
+
 def main():
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0

@@ -160,7 +160,6 @@ class Analyzer:
             )
 
     @staticmethod
-    
     def is_sym(token, value = None):
         if token and token.kind == parser.Parser.SYMBOL:
             if value is not None:

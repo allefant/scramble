@@ -110,7 +110,7 @@ class CWriter:
 
         elif tok.kind == p.OPERATOR:
             self.stack = self.format_expression_as_list(tok) + self.stack
-            return None
+            word = ""
         elif tok.kind == p.COMMENT:
             word = "/*" + tok.value + " */"
 
@@ -169,6 +169,8 @@ class CWriter:
             r = [token.value[0]]
             if token.value[1].kind == p.OPERATOR:
                 if is_sym(token.value[1].value[0], "("):
+                    # function call
+                    self.check_function_call_named_parameters(token.value[0].value, token.value[1])
                     r += []
                 else:
                     r += [" "] # what the...?
@@ -333,7 +335,7 @@ class CWriter:
             self.line += word
             prev = word
 
-    def handle_function(self, node):
+    def handle_function_definition(self, node):
         no_decl = False
         p = self.p
 
@@ -878,6 +880,38 @@ class CWriter:
                                     first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
                                     return name
 
+    def _replace_assignments(self, function_name, parameter_pos, pop, index):
+        op = pop.value[index]
+        if isinstance(op, parser.Token) or is_tok(op):
+            pass
+        elif is_sym(op.value[0], ","):
+            count = self._replace_assignments(function_name, parameter_pos, op, 1)
+            count2 = self._replace_assignments(function_name, parameter_pos + count, op, 2)
+            return count2
+        elif is_sym(op.value[0], "="):
+            f = self.find_function(function_name)
+            if not f:
+                self.p.error_token(f"Unknown function {function_name}", op)
+            else:
+                if parameter_pos >= len(f.parameters):
+                    self.p.error_token(f"{function_name} has {len(f.parameters)} parameters"
+                        f", but tried to assign {op.value[1]} as {1 + parameter_pos}", op)
+                elif f.parameters[parameter_pos].name != op.value[1].value:
+                    self.p.error_token(f"{function_name} parameter {1 + parameter_pos} is "
+                        f"'{f.parameters[parameter_pos].name}' but tried to assign '{op.value[1].value}'", op)
+            new_op = op.value[2]
+            new_op.comments = [op.value[1]]
+            pop.value = list(pop.value[:index]) + [new_op,] + list(pop.value[index + 1:])
+            
+        else:
+            pass
+        return parameter_pos + 1
+
+    def check_function_call_named_parameters(self, function_name, function_call):
+        if is_sym(function_call.value[0], "("):
+            if not is_sym(function_call.value[1], ")"):
+                self._replace_assignments(function_name, 0, function_call, 1)
+
     def write_line(self, s, block):
         """
         Write out one statement in C language.
@@ -976,7 +1010,7 @@ class CWriter:
                     self.before_first_function_code = self.code
                     self.code = ""
                 self.current_function.append(s)
-                self.handle_function(s)
+                self.handle_function_definition(s)
                 self.current_function.pop()
             elif s.kind == p.IMPORT:
                 self.handle_import(s.value[1:], s.is_static)

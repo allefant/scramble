@@ -154,7 +154,11 @@ class Parser:
         pos = self.pos
         while pos < len(self.text):
             if not self.text[pos].isalnum() and self.text[pos] != "_":
-                break
+                # handle numbers like 0.1e-10
+                if self.text[pos] == "-" and pos > 0 and self.text[pos - 1] == "e" and self.text[self.pos - 1].isdigit():
+                    pass
+                else:
+                    break
             pos += 1
         return pos
 
@@ -437,6 +441,7 @@ class Parser:
         node = Node(Parser.FUNCTION, [t])
         node.name = fname
         node.ret = []
+        node.parameters = []
         for rt in rtype.split():
             # TODO: maybe re-use a separate parser in module.py to
             # tokenize/parse those definitions, maybe even use a
@@ -445,6 +450,7 @@ class Parser:
             t = Token(tokt, rt, 0, 0)
             node.ret.append(t)
         self.external_functions[fname] = node
+        return node
 
 def get_row_col(node):
 

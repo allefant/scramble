@@ -1,5 +1,6 @@
 from . import parser
 from . import analyzer
+from . import helper
 import glob
 
 def parse_all(p, modules):
@@ -9,12 +10,14 @@ def parse_all(p, modules):
 
 def parse_e_file(p : parser.Parser, text):
     type_name = None
+    current_fun = None
     for row in text.splitlines():
         a = row.split(":")
         if len(a) == 1:
             name = a[0]
+            current_fun = None
             if name.startswith("def "):
-                p.add_external_function(name)
+                current_fun = p.add_external_function(name)
             elif name not in p.external_types:
                 block = parser.Node(p.BLOCK, [])
                 block.variables = []
@@ -22,8 +25,12 @@ def parse_e_file(p : parser.Parser, text):
             type_name = name
         else:
             name, kind = a[0], a[1]
-            if name.startswith(" ") and type_name.startswith("def "):
-                pass
+            if name.startswith(" ") and current_fun:
+                # function parameter
+                par = helper.Parameter()
+                par.name = name.strip()
+                par.declaration = kind
+                current_fun.parameters.append(par)
             else:
                 node = parser.Node(p.OPERATOR, [
                     # TODO: ** and so on pointers
