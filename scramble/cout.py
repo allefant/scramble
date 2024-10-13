@@ -3,6 +3,11 @@ from . import parser, analyzer, helper
 is_sym = analyzer.Analyzer.is_sym
 is_op = analyzer.Analyzer.is_op
 is_tok = analyzer.Analyzer.is_tok
+TOKEN = parser.Parser.TOKEN
+OPERATOR = parser.Parser.OPERATOR
+SYMBOL = parser.Parser.SYMBOL
+
+helper.is_sym = is_sym
 
 class CWriter:
 
@@ -155,6 +160,41 @@ class CWriter:
         token.value = (if_token, b_node, else_node)
         else_node.value = (else_token, a_node, c_node)
 
+    def rearrange_null_pointer_expression(self, token : parser.Node):
+        # x?.y is the same as x ? x.y : None
+        #
+        # token at first will be:
+        #    Node(OPERATOR, (Token(3:11, SYMBOL, '?.'),
+        #        Token(3:10, TOKEN, 'x'),
+        #        Token(3:13, TOKEN, 'y'))
+        #    )
+        # token should be transformed to:
+        #    Node(OPERATOR, (Token(3:16, SYMBOL, '?'),
+        #        Token(3:14, TOKEN, 'x'),
+        #        Node(OPERATOR, (Token(3:23, SYMBOL, ':'),
+        #            Node(OPERATOR, (Token(3:19, SYMBOL, '->'),
+        #                Token(3:18, TOKEN, 'x'),
+        #                Token(3:21, TOKEN, 'y'))
+        #            ),
+        #            Token(3:25, TOKEN, 'NULL'))
+        #        ))
+        #    ),
+        if len(token.value) != 3:
+            self.p.error_token("Malformed null pointer expression.", token)
+        op_token = token.value[0]
+        pointer_token = token.value[1]
+        field_token = token.value[2]
+
+        colon = parser.Token(self.p.SYMBOL, ":", 0, 0)
+        arrow = parser.Token(self.p.SYMBOL, "->", 0, 0)
+        null = parser.Token(self.p.TOKEN, "NULL", 0, 0)
+
+        pointer_node = parser.Node(self.p.OPERATOR, (arrow, pointer_token, field_token))
+        else_node = parser.Node(self.p.OPERATOR, (colon, pointer_node, null))
+
+        op_token.value = "?"
+        token.value = (op_token, pointer_token, else_node)
+
     def format_expression_as_list(self, token : parser.Node):
         """
         Given an operator node, return a list of tokens/nodes/strings to
@@ -188,6 +228,11 @@ class CWriter:
         # deal with if expression
         if op == "if":
             self.rearrange_if_expression(token)
+
+        # null pointer operator
+        if op == "?.":
+            self.rearrange_null_pointer_expression(token)
+            op = token.value[0].value
     
         left = None
         right = None
@@ -329,11 +374,21 @@ class CWriter:
                 prev = None
                 continue
             if prev:
-                if prev[-1].isalnum() and word[0].isalnum():
+                if prev[-1].isidentifier() and word[0].isidentifier():
                     self.line += " "
 
             self.line += word
             prev = word
+
+    def get_token_list_as_string(self, tokens):
+        output = ""
+        for tok in tokens:
+            if isinstance(tok, str):
+                output += tok
+                continue
+            word = self.format_op(tok)
+            output += word
+        return output
 
     def handle_function_definition(self, node):
         no_decl = False
@@ -373,7 +428,7 @@ class CWriter:
 
         # Write prototype into header.
         if not self.in_macro and not node.parent_class:
-            if node.is_static :
+            if node.is_static:
                 # always forward declare static functions, just in
                 # case - that way it's never required to do so
                 if not no_decl:
@@ -459,7 +514,6 @@ class CWriter:
 
             self.add_iline(kind + " {")
             self.indent += 1
-
             self.write_block(node.block)
 
             #for field in node.fields:
@@ -598,6 +652,11 @@ class CWriter:
             if op.value[0].value == "*":
                 var = op.value[2] # right operator
                 return var
+            elif op.value[0].value == ".":
+                dots = self.format_expression_as_list(decl[0])
+                #dots = helper.find_dots(p, decl[0])
+                #return ".".join([v.value for v in dots])
+                return self.get_token_list_as_string(dots)
             return op.value[1]
         if decl[0].kind == p.TOKEN:
             return decl[0]
@@ -605,12 +664,16 @@ class CWriter:
 
     def get_decl_type_name(self, decl):
         op = decl[0] # assume it's just a * operator
-        if op.kind == self.p.TOKEN:
+        if op.kind == TOKEN:
             v = self.find_variable(op.value)
             if v:
                 type_token = v.declaration.value[1]
             else:
                 return ""
+        elif op.kind == OPERATOR:
+            if is_sym(op.value[0], "."):
+                return None
+            type_token = op.value[1]
         else:
             type_token = op.value[1] # left operator
         return type_token.value
@@ -699,9 +762,12 @@ class CWriter:
         container_name = self.get_decl_var(token_container)
         loop_iter_name = "__iter%d__" % self.iter_id
         self.iter_id += 1
-       
         type_name = self.get_decl_type_name(token_container)
-        if type(type_name) != str:
+        if type_name is None:
+            ctype = helper.find_type(self, token_container[0])
+            type_name = ctype[1].value
+            iter_name = type_name + "Iterator"
+        elif type(type_name) != str:
             p.error_token("Need iterator type", token_for)
         else:
             iter_name = type_name + "Iterator"
@@ -834,54 +900,62 @@ class CWriter:
         if first.kind == self.p.OPERATOR:
             tokens = first.value
             op = tokens[0]
-            if analyzer.Analyzer.is_sym(op, "="):
+            if is_sym(op, "="):
                 if tokens[1].kind == self.p.OPERATOR:
                     if is_tok(tokens[1].value[0], "auto"):
-
-                        # detect form auto var = foo.bar
-                        dot = None
-                        if tokens[2].kind == self.p.OPERATOR and is_sym(tokens[2].value[0], "."):
-                            var = tokens[2].value[1].value # foo in example above
-                            dot = tokens[2].value[2].value # bar in example above
-                            # FIXME: detect arbitrary chain of . not just the first
-                        else:
-                            var = tokens[2].value
-
-                        name = tokens[1].value[1]
-                        v = self.find_variable(var)
-                        if v:
-                            if dot:
-                                tname = v.get_type()
-                                if tname.endswith("*"): tname = tname[:-1]
-                                t = self.p.analyzer.types.get(tname, None)
-                                if t:
-                                    for v2 in t.block.variables:
-                                        if v2.name == dot:
-                                            v = v2
-                                if not t:
-                                    t = self.p.external_types.get(tname, None)
-                                    if t:
-                                        for v2 in t.variables:
-                                            if v2.name == dot:
-                                                v = v2
-                            # take the variable declaration and replace the name with our auto variable name
-                            first.value = (tokens[0], v.replace(name)) + tokens[2:]
+                        atype = helper.find_type(self, tokens[2])
+                        if atype:
+                            name = tokens[1].value[1]
+                            tokens[1].value = atype + [tokens[1].value[1]]
                             return name
-                        else:
-                            if isinstance(tokens[2].value[0], str):
-                                self.p.error_token("Unexpected token ", tokens[2])
-                            else:
-                                f = self.find_function(tokens[2].value[0].value)
-                                if f:
-                                    if not f.ret:
-                                        self.p.error_token("Cannot determine function return type", tokens[2])
-                                    if len(f.ret) < 2:
-                                        self.p.error_token("Right now auto only works with pointers", tokens[2])
-                                    first.value[1].value = (f.ret[1], f.ret[0], first.value[1].value[1])
-                                    return name
+
+    def check_multiple_return(self, first):
+        if first.kind == self.p.OPERATOR:
+            tokens = first.value
+            op = tokens[0]
+            if analyzer.Analyzer.is_sym(op, "="):
+                if tokens[1].kind == self.p.OPERATOR:
+                    if is_sym(tokens[1].value[0], "("):
+                        if is_sym(tokens[1].value[1].value[0], ","):
+                            fun = first.value[2]
+                            parenthesis = fun.value[1]
+                            if parenthesis.kind == self.p.OPERATOR:
+                                if is_sym(parenthesis.value[0], "("):
+                                    # replace assignment with function call
+                                    first.kind = fun.kind
+                                    first.value = fun.value
+                                    # add parameters
+                                    if is_sym(parenthesis.value[1], ")"):
+                                        l = []
+                                        parenthesis.value.insert(1, None)
+                                    else:
+                                        l = helper.tree_to_list(self.p, parenthesis.value[1])
+                                    ampersand = parser.Token(self.p.SYMBOL, "&", 0, 0)
+
+                                    params = helper.tree_to_list(self.p, tokens[1].value[1])
+                                    declare_type = None
+                                    names = []
+                                    for param in params:
+                                        if param.kind == OPERATOR:
+                                            # if the first item is something like: "LandFloat x" we declare variables
+                                            declare_type = param.value[0].value
+                                            param = param.value[1]
+                                        ref = parser.Node(self.p.OPERATOR, [ampersand, param])
+                                        l.append(ref)
+                                        names.append(param.value)
+                                    parenthesis.value[1] = helper.list_to_tree(self.p, l)
+                                    if declare_type is not None:
+                                        try:
+                                            self.add_line(self.indent * "    " + declare_type + " " + (", ".join(names)) + ";")
+                                        except TypeError:
+                                            self.p.error_token(f"Cannot join names: {names}", tokens[0])
 
     def _replace_assignments(self, function_name, parameter_pos, pop, index):
-        op = pop.value[index]
+        try:
+            op = pop.value[index]
+        except IndexError:
+            self.p.error_token(f"Cannot assign return values of {function_name}", pop)
+        if op is None: return 0
         if isinstance(op, parser.Token) or is_tok(op):
             pass
         elif is_sym(op.value[0], ","):
@@ -950,6 +1024,8 @@ class CWriter:
                         if name.value == v2.name:
                             v2.declaration = tokens[0].value[1]
 
+            self.check_multiple_return(tokens[0])
+
             line = self.format_line(tokens)
             if s.is_static:
                 line = "static " + line
@@ -992,12 +1068,23 @@ class CWriter:
                     i += 1
 
             if not self.in_header:
-                for c in s.comments:
-                    self.code += self.indent * "    "
-                    self.code += "//"
-                    self.code += c.value.rstrip()
-                    self.code += "\n"
-                    self.out_crow += 1
+                if s.comments:
+                    if len(s.comments) == 1:
+                        self.code += self.indent * "    "
+                        self.code += "//"
+                        self.code += s.comments[0].value.rstrip()
+                        self.code += "\n"
+                        self.out_crow += 1
+                    else:
+                        self.code += "/*\n"
+                        self.out_crow += 1
+                        for c in s.comments:
+                            self.code += self.indent * "    "
+                            self.code += c.value.rstrip()
+                            self.code += "\n"
+                            self.out_crow += 1
+                        self.code += "*/\n"
+                        self.out_crow += 1
                     
             if s.kind == p.LINE:
                 self.write_line(s, block)

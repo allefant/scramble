@@ -1,4 +1,5 @@
 from . import analyzer
+from . import parser
 
 class Parameter:
     name = ""
@@ -195,3 +196,79 @@ def find_dots(p : "Parser", token : "Node"):
         r.insert(0, x)
     go_up(token)
     return r
+
+def tree_to_list(p, t):
+    is_sym = analyzer.Analyzer.is_sym
+    r = []
+    stack = [t]
+    while stack:
+        node = stack.pop()
+        if node.kind == p.OPERATOR:
+            if is_sym(node.value[0], ","):
+                stack.append(node.value[2])
+                stack.append(node.value[1])
+            else:
+                r.append(node)
+        else:
+            r.append(node)
+    return r
+
+def list_to_tree(p, l):
+    pos = 1
+    node = l[0]
+    while pos < len(l):
+        b = l[pos]
+        comma = parser.Token(p.SYMBOL, ",", 0, 0)
+        node = parser.Node(p.OPERATOR, [comma, node, b])
+        pos += 1
+    return node
+
+# This gets an expression and tries to deduce the type.
+# For example if we have:
+# A *a
+# fun f -> B*
+# class A:
+#   C *c
+# A *c
+# then these would be the return values:
+# 1. a -> A*
+# 2. c.c -> C*
+# 3. f() -> B*
+def find_type(self, expression):
+    # detect form auto foo.bar
+    dot = None
+    if expression.kind == self.p.OPERATOR and is_sym(expression.value[0], "."):
+        var = expression.value[1].value # foo in example above
+        dot = expression.value[2].value # bar in example above
+        # FIXME: detect arbitrary chain of . not just the first
+    else:
+        var = expression.value
+
+    v = self.find_variable(var)
+    if v:
+        if dot:
+            tname = v.get_type()
+            if tname.endswith("*"): tname = tname[:-1]
+            t = self.p.analyzer.types.get(tname, None)
+            if t:
+                for v2 in t.block.variables:
+                    if v2.name == dot:
+                        v = v2
+            if not t:
+                t = self.p.external_types.get(tname, None)
+                if t:
+                    for v2 in t.variables:
+                        if v2.name == dot:
+                            v = v2
+        return list(v.declaration.value)[:-1]
+    else:
+        if isinstance(expression.value[0], str):
+            self.p.error_token("Unexpected token ", expression)
+        else:
+            f = self.find_function(expression.value[0].value)
+            if f:
+                if not f.ret:
+                    self.p.error_token("Cannot determine function return type", expression)
+                if len(f.ret) < 2:
+                    self.p.error_token("Right now auto only works with pointers", expression)
+                return [f.ret[1], f.ret[0]]

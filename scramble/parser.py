@@ -63,7 +63,7 @@ class Parser:
 
     # Combined symbols of length 2 and 3.
     operators2 = ["==", "++", "--", "->", "<<", ">>", "+=", "-=", "*=", "/=",
-        "|=", "&=", "^=", "~=", ">=", "<=", "!=", "&&", "||", "%=", "//"]
+        "|=", "&=", "^=", "~=", ">=", "<=", "!=", "&&", "||", "%=", "//", "?."]
     operators3 = ["***", ">>=", "<<=", "..."]
 
     @staticmethod
@@ -143,6 +143,7 @@ class Parser:
         l = self.row
         o = self.pos - self.rowpos - 1
         line_pos = self.text.find("\n", self.pos)
+        if line_pos == -1: line_pos = len(self.text)
         return self.find_quote_end(quote, line_pos, "single", l, o)
 
     def find_triple_quote_end(self, quote):

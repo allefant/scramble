@@ -64,6 +64,7 @@ class Analyzer:
 
         "." : 15,
         "->" : 15,
+        "?." : 15,
 
         " " : 16,
         
@@ -382,6 +383,9 @@ class Analyzer:
     def analyze_class(self, name, node):
         node.name = name
 
+        if name and name.value[0].startswith("_"):
+            node.is_static = True
+
         if node.value[0].value == "class":
             node.value[0].value = "struct"
         #for row in block.value:
@@ -600,9 +604,48 @@ class Analyzer:
                             # def fun(...) -> ret
                             # we simply transform the above to:
                             # ret def fun(...)
-                            ti += len(tokens[i + 1:])
+                            ret_tok_count = len(tokens[i + 1:])
+                            ti += ret_tok_count
                             tokens = tokens[:def_pos] + tokens[i + 1:] + tokens[def_pos:i]
+                            def_pos = ti
                             break
+
+                    done = False
+                    nametok = None
+                    name = ""
+                    first = None
+                    i = def_pos + 1
+                    while not done:
+                        done = True
+                        while i < len(tokens):
+                            if self.is_sym(tokens[i], "***"):
+                                name += "#"
+                                tokens = tokens[:i] + tokens[i + 1:]
+                                done = False
+                                break
+                            elif self.is_sym(tokens[i], "("):
+                                # def x(
+                                break
+                            elif self.is_sym(tokens[i], "*"):
+                                # def x*
+                                i += 1
+                                done = False
+                                continue
+                            else:
+                                name += tokens[i].value
+
+                                if nametok is None:
+                                    nametok = i
+                                    i += 1
+                                else:
+                                    tokens = tokens[:i] + tokens[i + 1:]
+                                done = False
+                                break
+
+                    if nametok is None:
+                        p.error_pos(f"function definition has no name",
+                                tokens[def_pos].row, tokens[def_pos].col)
+                    tokens[nametok].value = name
 
                     # function pointer instead of definition
                     node.is_pointer = False
@@ -623,11 +666,11 @@ class Analyzer:
                     else:
                         # def fun(...):
                         if tokens[ti + 2].value != "(":
-                            p.error_pos("Invalid function definition",
+                            p.error_pos(f"Invalid function definition, {tokens[ti + 2]} should be (",
                                 tokens[ti + 2].row, tokens[ti + 2].col)
 
                         if tokens[-1].value != ")":
-                            p.error_pos("Invalid function definition",
+                            p.error_pos("Invalid function definition, no )",
                                 tokens[-1].row, tokens[-1].col)
                         
                         self.analyze_function(name, node,

@@ -63,33 +63,16 @@ def print_diff(new, old):
         sys.stdout.write("line missing\n")
     sys.stdout.write(O)
 
-def c_test(prog, exp, external = None):
+def c_test(prog, exp_c, external=None):
+    return ch_test(prog, exp_c=exp_c, external=external)
 
-    exp = exp.strip()
-    exp = '#include "test.h"\n' + exp
-    p = Parser("test", prog, comments = True)
+def h_test(prog, exp):
+    return ch_test(prog, exp_h=exp)
 
-    if external:
-        p2 = Parser("external", external)
-        p2.parse()
-        ecode = EWriter().generate(p2)
-        module.parse_e_file(p, ecode)
-    
-    try:
-        p.parse()
-        c = CWriter()
-        code, header = c.generate(p, "test", 1, "_TEST")
-        code = code.strip()
-    except Exception as e:
-        traceback.print_exc()
-        code = ""
-    
-    if code == exp:
-        return True
-
-    print("Expected:")
+def _comp(name, p, exp, code):
+    print("Expected %s:" % name)
     print_diff(exp, code)
-    print("Found:")
+    print("Found %s:" % name)
     print(code)
 
     print("Found parser tokens:")
@@ -97,24 +80,42 @@ def c_test(prog, exp, external = None):
     code = s.generate(p)
     print(code)
 
-    return False
+def ch_test(prog, exp_c=None, exp_h=None, external=None):
 
-def h_test(prog, exp):
-    exp = exp.strip()
-    exp = "#ifndef _TEST_TEST_\n#define _TEST_TEST_\n" + exp + "\n#endif"
-    p = Parser("test", prog)
-    p.parse()
-    c = CWriter()
-    code, header = c.generate(p, "test", 1, "_TEST")
-    header = header.strip()
-    if header == exp:
-        return True
-    print("<" + header + ">")
+    p = Parser("test", prog, comments=True)
 
-    s = SWriter()
-    code = s.generate(p)
-    print(code)
-    return False
+    if external:
+        p2 = Parser("external", external)
+        p2.parse()
+        ecode = EWriter().generate(p2)
+        module.parse_e_file(p, ecode)
+
+    try:
+        p.parse()
+        c = CWriter()
+        code, header = c.generate(p, "test", 1, "_TEST")
+        code = code.strip()
+        header = header.strip()
+    except Exception as e:
+        traceback.print_exc()
+        code = ""
+        header = ""
+
+    if exp_c:
+        exp = exp_c.strip()
+        exp = '#include "test.h"\n' + exp
+        if code != exp:
+            _comp("c", p, exp, code)
+            return False
+
+    if exp_h:
+        exp = exp_h.strip()
+        exp = "#ifndef _TEST_TEST_\n#define _TEST_TEST_\n" + exp + "\n#endif"
+        if header != exp:
+            _comp("h", p, exp, header)
+            return False
+
+    return True
 
 def err_test(prog, err):
     p = Parser("test", prog, comments = True)
@@ -424,6 +425,22 @@ for MyElem *x in MyArray *arr: handle(x)
 }
 """)
 
+def test_for_in_auto():
+    return c_test("""
+class Global:
+    MyArray *arr
+Global *g
+for MyElem *x in g.arr: handle(x)
+    """, """
+static Global * g;
+{
+    MyArrayIterator __iter0__ = MyArrayIterator_first(g->arr);
+    for (MyElem * x = MyArrayIterator_item(g->arr, &__iter0__); MyArrayIterator_next(g->arr, &__iter0__); x = MyArrayIterator_item(g->arr, &__iter0__)) {
+        handle(x);
+    }
+}
+""")
+
 def test_meta():
     return c_test("""
 ***scramble
@@ -432,6 +449,15 @@ parse("print(" + str(x) + ")")
 ***
     """, """
 print(2);
+""")
+
+def test_meta2():
+    return c_test("""
+***scramble
+parse('x = ""')
+***
+    """, """
+static x = "";
 """)
 
 def test_triple():
@@ -760,6 +786,23 @@ for MyElem *x in MyArray *arr: x.y = 0
 }
 """)
 
+def test_for_in_dot():
+    return c_test(r"""
+class A:
+    LandArray *b
+A *a
+for int *c in a.b:
+    print(*c)
+""", r"""
+static A * a;
+{
+    LandArrayIterator __iter0__ = LandArrayIterator_first(a->b);
+    for (int * c = LandArrayIterator_item(a->b, &__iter0__); LandArrayIterator_next(a->b, &__iter0__); c = LandArrayIterator_item(a->b, &__iter0__)) {
+        print(* c);
+    }
+}
+""")
+
 def test_class_access():
     return c_test("""
 static class B:
@@ -837,6 +880,44 @@ static class A:
 static class X:
     A *a
 """)
+
+def test_local_class():
+    return ch_test("""
+class A:
+    pass
+
+static class B:
+    pass
+    """, exp_c="""
+typedef struct B B;
+struct B {
+    ;
+};
+    """, exp_h="""
+typedef struct A A;
+struct A {
+    ;
+};
+    """)
+
+def test_local_class_underscore():
+    return ch_test("""
+class A:
+    pass
+
+class _B:
+    pass
+    """, exp_c="""
+typedef struct _B _B;
+struct _B {
+    ;
+};
+    """, exp_h="""
+typedef struct A A;
+struct A {
+    ;
+};
+    """)
 
 def test_alternative_return():
     return c_test("""
@@ -1214,6 +1295,22 @@ def fun_a -> A*:
     pass
 """)
 
+def test_auto_pointer2():
+    return c_test("""
+class A:
+    B* x
+class B:
+    C* c
+def fun:
+    A *a
+    print(a.x.c)
+""", """
+void fun(void) {
+    A * a;
+    print(a->x->c);
+}
+""")
+
 def test_if_expression():
     return c_test("""
 def fun:
@@ -1306,7 +1403,91 @@ void test(void) {
 
 """)
 
+def test_multiret():
+    return c_test("""
+(a, b) = fun(2, 3, 4)
+""", """
+static fun(2, 3, 4, & a, & b);
+""")
+
+def test_multiret2():
+    return c_test("""
+(a, b) = fun(1+2, 3, 4 * fun(2))
+""", """
+static fun(1 + 2, 3, 4 * fun(2), & a, & b);
+""")
+
+def test_multiret3():
+    return c_test("""
+(a, b, c) = fun(x)
+""", """
+static fun(x, & a, & b, & c);
+""")
+
+def test_multiret4():
+    return c_test("""
+(int a, b, c) = fun(x)
+""", """
+int a, b, c;
+static fun(x, & a, & b, & c);
+""")
+
+def test_multiret5():
+    return c_test("""
+(int a, b) = fun()
+""", """
+int a, b;
+static fun(& a, & b);
+""")
+
+def test_multiline_comment():
+    return c_test(r"""
+    #   /\
+    #  /\/\
+    # /\/\/\
+    # \/\/\/
+    #  \/\/
+    #   \/
+def fun:
+    pass
+""", r"""
+/*
+   /\
+  /\/\
+ /\/\/\
+ \/\/\/
+  \/\/
+   \/
+*/
+void fun(void) {
+    ;
+}
+""")
+
+def test_oneline_comment():
+    return c_test(r"""
+    # /
+def fun:
+    pass
+""", r"""
+// /
+void fun(void) {
+    ;
+}
+""")
+
+def test_null_pointer_operator():
+    return c_test(r"""
+def fun:
+    print(x?.y)
+""", r"""
+void fun(void) {
+    print(x ? x->y : NULL);
+}
+""")
+
 def main():
+    print("Running tests")
     test = sys.argv[1] if len(sys.argv) > 1 else None
     total = 0
     failed = 0
