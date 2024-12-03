@@ -97,7 +97,6 @@ class CWriter:
             elif word == "not": word = "!"
             elif word == "and": word = "&&"
             elif word == "or": word = "||"
-            elif word == "//": word = "/"
 
         elif tok.kind == p.STRING:
             if word.startswith("'''") or word.startswith('"""'):
@@ -224,7 +223,7 @@ class CWriter:
         op = token.value[0].value
         if op not in a.level:
             p.error_token("Unknown operator '" + op + "' found.", token)
-        
+
         # deal with if expression
         if op == "if":
             self.rearrange_if_expression(token)
@@ -342,8 +341,9 @@ class CWriter:
             r += [extra]
 
         if op == "//":
-            r = ["(int)", "("] + r + [")"]
-            
+            r = ["land_div", "(", r[0], ", ", r[4], ")"]
+        # note: we keep % as the C % even though Python one is different
+
         return r
 
     def format_line(self, tokens):
@@ -641,6 +641,9 @@ class CWriter:
         self.add_iline(line)
         
         self.indent += 1
+        if not statement.block:
+            p.error_token("Expected block for for.", statement)
+
         self.write_block(statement.block)
         self.indent -= 1
         self.add_iline("}")
@@ -765,6 +768,8 @@ class CWriter:
         type_name = self.get_decl_type_name(token_container)
         if type_name is None:
             ctype = helper.find_type(self, token_container[0])
+            if ctype is None:
+                p.error_token(f"Could not find type for {container_name}", token_container[0])
             type_name = ctype[1].value
             iter_name = type_name + "Iterator"
         elif type(type_name) != str:
@@ -850,6 +855,8 @@ class CWriter:
             if statement.sub_kind == "range":
                 self.write_for_in_range(statement)
             elif statement.sub_kind == "in":
+                if not statement.value:
+                    p.error_token("Check your for loop syntax", statement.name)
                 self.write_for_in(statement)
             else:
                 self.write_for_while(statement)

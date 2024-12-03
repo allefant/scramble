@@ -964,9 +964,9 @@ void fun(void) {
 
 def test_integer_div():
     return c_test("""
-x = a // b
+x = (a + 1) // (b + 1)
 """, """
-static x = (int)(a / b);
+static x = land_div((a + 1), (b + 1));
 """)
 
 def test_auto():
